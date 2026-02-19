@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --mc-primary: #1b4965;
+  --mc-primary-hover: #163d55;
+  --mc-blue: #5fa8d3;
+  --mc-teal: #62b6cb;
+  --mc-mint: #bee9e8;
+  --mc-sky: #cae9ff;
+  --mc-surface: #f4f8fb;
+  --mc-text: #1a2332;
+  --mc-text-secondary: #4a5568;
+  --mc-text-muted: #718096;
+  --mc-border: #dde4eb;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
+  background-color: var(--mc-surface);
+  color: var(--mc-text);
+  line-height: 1.6;
+}
+
+/* Layout responsive del dashboard */
+.sidebar-desktop {
+  display: none !important;
+}
+
+.sidebar-mobile {
+  display: flex !important;
+}
+
+.dashboard-main {
+  margin-left: 0;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+  .sidebar-desktop {
+    display: flex !important;
+  }
+
+  .sidebar-mobile {
+    display: none !important;
+  }
+
+  .dashboard-main {
+    margin-left: 220px;
+    padding-bottom: 0;
+  }
+}
