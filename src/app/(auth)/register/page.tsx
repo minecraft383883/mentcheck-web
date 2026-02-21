@@ -2,19 +2,43 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Ocurrió un error. Intenta de nuevo.");
+        return;
+      }
+
+      router.push("/login?registered=true");
+    } catch {
+      setError("No se pudo conectar con el servidor. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -22,7 +46,6 @@ export default function RegisterPage() {
       className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
       style={{ backgroundColor: "var(--mc-surface)" }}
     >
-      {/* Marca */}
       <div className="mb-8 text-center">
         <p
           className="text-2xl font-semibold tracking-tight"
@@ -35,7 +58,6 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      {/* Tarjeta */}
       <div
         className="w-full max-w-md rounded-xl px-8 py-10"
         style={{
@@ -76,6 +98,21 @@ export default function RegisterPage() {
             placeholder="Mínimo 8 caracteres"
             required
           />
+
+          {error && (
+            <div
+              style={{
+                padding: "0.625rem 1rem",
+                borderRadius: "0.5rem",
+                backgroundColor: "#fff5f5",
+                border: "1px solid #fed7d7",
+                fontSize: "0.8125rem",
+                color: "#c53030",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           <Button type="submit" variant="primary" fullWidth loading={loading}>
             Crear cuenta

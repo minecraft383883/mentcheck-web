@@ -1,35 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PatientProfile } from "@/types/profile";
 
-const SAMPLE_PROFILE: PatientProfile = {
-  name: "Nombre de ejemplo",
-  email: "usuario@ejemplo.com",
+const EMPTY_PROFILE: PatientProfile = {
+  name: "",
+  email: "",
   phone: "",
   birthdate: "",
-  emergencyContact: {
-    name: "",
-    phone: "",
-    relationship: "",
-  },
+  emergencyContact: { name: "", phone: "", relationship: "" },
 };
 
 type Section = "personal" | "emergency";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<PatientProfile>(SAMPLE_PROFILE);
+  const [profile, setProfile] = useState<PatientProfile>(EMPTY_PROFILE);
   const [activeSection, setActiveSection] = useState<Section>("personal");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  async function fetchProfile() {
+    try {
+      const res = await fetch("/api/profile");
+      const data = await res.json();
+      if (res.ok) setProfile(data);
+    } catch (err) {
+      console.error("Error al cargar perfil:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function updateField(field: keyof PatientProfile, value: string) {
     setProfile((prev) => ({ ...prev, [field]: value }));
   }
 
-  function updateEmergency(field: keyof PatientProfile["emergencyContact"], value: string) {
+  function updateEmergency(
+    field: keyof PatientProfile["emergencyContact"],
+    value: string
+  ) {
     setProfile((prev) => ({
       ...prev,
       emergencyContact: { ...prev.emergencyContact, [field]: value },
@@ -38,17 +55,51 @@ export default function ProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setSaved(true);
-    setLoading(false);
-    setTimeout(() => setSaved(false), 3000);
+    setError("");
+    setSaving(true);
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profile),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Ocurrió un error al guardar.");
+        return;
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Error al guardar perfil:", err);
+      setError("No se pudo conectar con el servidor.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const tabs: { value: Section; label: string }[] = [
     { value: "personal", label: "Datos personales" },
     { value: "emergency", label: "Contacto de emergencia" },
   ];
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          padding: "2rem 1.5rem",
+          fontSize: "0.875rem",
+          color: "var(--mc-text-muted)",
+        }}
+      >
+        Cargando perfil...
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "580px" }}>
@@ -98,11 +149,11 @@ export default function ProfilePage() {
             flexShrink: 0,
           }}
         >
-          {profile.name.charAt(0).toUpperCase()}
+          {profile.name.charAt(0).toUpperCase() || "?"}
         </div>
         <div>
           <p style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
-            {profile.name}
+            {profile.name || "Sin nombre"}
           </p>
           <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>
             {profile.email}
@@ -134,7 +185,9 @@ export default function ProfilePage() {
               fontSize: "0.875rem",
               fontWeight: activeSection === tab.value ? 500 : 400,
               color:
-                activeSection === tab.value ? "var(--mc-primary)" : "var(--mc-text-secondary)",
+                activeSection === tab.value
+                  ? "var(--mc-primary)"
+                  : "var(--mc-text-secondary)",
               backgroundColor: activeSection === tab.value ? "#fff" : "transparent",
               border:
                 activeSection === tab.value
@@ -142,7 +195,8 @@ export default function ProfilePage() {
                   : "1px solid transparent",
               cursor: "pointer",
               transition: "all 0.15s",
-              boxShadow: activeSection === tab.value ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+              boxShadow:
+                activeSection === tab.value ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
             }}
           >
             {tab.label}
@@ -175,6 +229,7 @@ export default function ProfilePage() {
               value={profile.email}
               onChange={(e) => updateField("email", e.target.value)}
               required
+              disabled
             />
             <Input
               label="Telefono"
@@ -205,8 +260,8 @@ export default function ProfilePage() {
                 lineHeight: 1.5,
               }}
             >
-              Este contacto se usara cuando presiones el boton de emergencia. Asegurate de que sea
-              alguien de confianza y que tenga su telefono disponible.
+              Este contacto se usara cuando presiones el boton de emergencia. Asegurate
+              de que sea alguien de confianza y que tenga su telefono disponible.
             </div>
             <Input
               label="Nombre del contacto"
@@ -232,6 +287,22 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {error && (
+          <div
+            style={{
+              marginTop: "1.25rem",
+              padding: "0.625rem 1rem",
+              borderRadius: "0.5rem",
+              backgroundColor: "#fff5f5",
+              border: "1px solid #fed7d7",
+              fontSize: "0.8125rem",
+              color: "#c53030",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {saved && (
           <div
             style={{
@@ -249,7 +320,7 @@ export default function ProfilePage() {
         )}
 
         <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "flex-end" }}>
-          <Button type="submit" variant="primary" loading={loading}>
+          <Button type="submit" variant="primary" loading={saving}>
             Guardar cambios
           </Button>
         </div>

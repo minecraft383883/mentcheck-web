@@ -1,61 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import ReminderForm from "@/components/reminders/ReminderForm";
 import { Reminder, REMINDER_TYPES } from "@/types/reminder";
 
-const SAMPLE_REMINDERS: Reminder[] = [
-  {
-    id: "1",
-    type: "medicacion",
-    title: "Sertralina 50mg",
-    time: "08:00",
-    repeat: true,
-    status: "completado",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    type: "actividad",
-    title: "Ejercicio de respiración",
-    time: "12:00",
-    repeat: false,
-    status: "pendiente",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    type: "cita",
-    title: "Cita con terapeuta",
-    time: "17:00",
-    repeat: false,
-    status: "pendiente",
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export default function RemindersPage() {
-  const [reminders, setReminders] = useState<Reminder[]>(SAMPLE_REMINDERS);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  function handleSave(reminder: Reminder) {
-    setReminders([reminder, ...reminders]);
+  useEffect(() => {
+    fetchReminders();
+  }, []);
+
+  async function fetchReminders() {
+    try {
+      const res = await fetch("/api/reminders");
+      const data = await res.json();
+      if (res.ok) setReminders(data.reminders);
+    } catch (error) {
+      console.error("Error al cargar recordatorios:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave(reminder: Reminder) {
+    await fetchReminders();
     setShowForm(false);
   }
 
-  function toggleStatus(id: string) {
-    setReminders(
-      reminders.map((r) =>
-        r.id === id
-          ? { ...r, status: r.status === "pendiente" ? "completado" : "pendiente" }
-          : r
-      )
-    );
+  async function toggleStatus(id: string) {
+    const reminder = reminders.find((r) => r.id === id);
+    if (!reminder) return;
+
+    const newStatus = reminder.status === "pendiente" ? "completado" : "pendiente";
+
+    setReminders(reminders.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
+
+    try {
+      await fetch(`/api/reminders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (error) {
+      console.error("Error al actualizar estado:", error);
+      await fetchReminders();
+    }
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     setReminders(reminders.filter((r) => r.id !== id));
+
+    try {
+      await fetch(`/api/reminders/${id}`, { method: "DELETE" });
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+      await fetchReminders();
+    }
   }
 
   const pendientes = reminders.filter((r) => r.status === "pendiente");
@@ -100,73 +104,90 @@ export default function RemindersPage() {
         <ReminderForm onSave={handleSave} onCancel={() => setShowForm(false)} />
       )}
 
-      {/* Lista pendientes */}
-      {pendientes.length > 0 && (
-        <section style={{ marginBottom: "2rem" }}>
-          <h2
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 600,
-              color: "var(--mc-text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "0.75rem",
-            }}
-          >
-            Pendientes
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            {pendientes.map((r) => (
-              <ReminderItem
-                key={r.id}
-                reminder={r}
-                onToggle={toggleStatus}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Lista completados */}
-      {completados.length > 0 && (
-        <section>
-          <h2
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 600,
-              color: "var(--mc-text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "0.75rem",
-            }}
-          >
-            Completados
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            {completados.map((r) => (
-              <ReminderItem
-                key={r.id}
-                reminder={r}
-                onToggle={toggleStatus}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {reminders.length === 0 && !showForm && (
+      {/* Cargando */}
+      {loading ? (
         <div
           style={{
             padding: "3rem 1rem",
             textAlign: "center",
-            color: "var(--mc-text-muted)",
             fontSize: "0.875rem",
+            color: "var(--mc-text-muted)",
           }}
         >
-          No tienes recordatorios. Agrega uno para comenzar.
+          Cargando recordatorios...
         </div>
+      ) : (
+        <>
+          {/* Pendientes */}
+          {pendientes.length > 0 && (
+            <section style={{ marginBottom: "2rem" }}>
+              <h2
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  color: "var(--mc-text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                Pendientes
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                {pendientes.map((r) => (
+                  <ReminderItem
+                    key={r.id}
+                    reminder={r}
+                    onToggle={toggleStatus}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Completados */}
+          {completados.length > 0 && (
+            <section>
+              <h2
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  color: "var(--mc-text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                Completados
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                {completados.map((r) => (
+                  <ReminderItem
+                    key={r.id}
+                    reminder={r}
+                    onToggle={toggleStatus}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Vacio */}
+          {reminders.length === 0 && !showForm && (
+            <div
+              style={{
+                padding: "3rem 1rem",
+                textAlign: "center",
+                fontSize: "0.875rem",
+                color: "var(--mc-text-muted)",
+              }}
+            >
+              No tienes recordatorios. Agrega uno para comenzar.
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -196,7 +217,6 @@ function ReminderItem({ reminder, onToggle, onDelete }: ReminderItemProps) {
         transition: "opacity 0.2s",
       }}
     >
-      {/* Checkbox */}
       <button
         type="button"
         onClick={() => onToggle(reminder.id)}
@@ -221,7 +241,6 @@ function ReminderItem({ reminder, onToggle, onDelete }: ReminderItemProps) {
         )}
       </button>
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
@@ -258,7 +277,6 @@ function ReminderItem({ reminder, onToggle, onDelete }: ReminderItemProps) {
         </div>
       </div>
 
-      {/* Eliminar */}
       <button
         type="button"
         onClick={() => onDelete(reminder.id)}

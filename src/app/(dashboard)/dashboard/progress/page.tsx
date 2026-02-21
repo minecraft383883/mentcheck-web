@@ -1,51 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MoodChart from "@/components/stats/MoodChart";
-import { MOOD_OPTIONS, Mood } from "@/types/diary";
+import { MOOD_OPTIONS } from "@/types/diary";
 import { MonthlyStats } from "@/types/stats";
-
-// Datos de ejemplo hasta conectar la base de datos en Fase 3
-function generateSampleStats(): MonthlyStats {
-  const moods: (Mood | null)[] = [
-    "alegria", "alegria", null, "tedio", "ansiedad",
-    "alegria", null, "tristeza", "tedio", "ansiedad",
-    "alegria", "alegria", "miedo", null, "tedio",
-    "alegria", "ansiedad", "alegria", null, "tristeza",
-    "tedio", "alegria", "alegria", null, "ansiedad",
-    "alegria", "tristeza", null,
-  ];
-
-  const year = 2026;
-  const month = 1;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const records = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const mood = moods[i] ?? null;
-    return { date, mood, hasNote: mood !== null && i % 3 !== 0 };
-  });
-
-  const moodCounts: Record<string, number> = {};
-  records.forEach((r) => {
-    if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
-  });
-
-  const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as Mood | null;
-  const daysWithEntry = records.filter((r) => r.mood !== null).length;
-
-  return {
-    month: "Febrero",
-    year,
-    records,
-    dominantMood,
-    daysWithEntry,
-    totalDays: daysInMonth,
-  };
-}
-
-const STATS = generateSampleStats();
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
@@ -56,7 +14,52 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ProgressPage() {
-  const [stats] = useState<MonthlyStats>(STATS);
+  const [stats, setStats] = useState<MonthlyStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProgress();
+  }, []);
+
+  async function fetchProgress() {
+    try {
+      const res = await fetch("/api/progress");
+      const data = await res.json();
+      if (res.ok) setStats(data);
+    } catch (error) {
+      console.error("Error al cargar progreso:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          padding: "2rem 1.5rem",
+          fontSize: "0.875rem",
+          color: "var(--mc-text-muted)",
+        }}
+      >
+        Cargando progreso...
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div
+        style={{
+          padding: "2rem 1.5rem",
+          fontSize: "0.875rem",
+          color: "var(--mc-text-muted)",
+        }}
+      >
+        No se pudo cargar el progreso.
+      </div>
+    );
+  }
 
   const dominantOption = stats.dominantMood
     ? MOOD_OPTIONS.find((m) => m.value === stats.dominantMood)
@@ -93,7 +96,6 @@ export default function ProgressPage() {
           marginBottom: "1.75rem",
         }}
       >
-        {/* Dias registrados */}
         <div
           style={{
             backgroundColor: "#fff",
@@ -121,7 +123,6 @@ export default function ProgressPage() {
           </p>
         </div>
 
-        {/* Emocion predominante */}
         <div
           style={{
             backgroundColor: dominantOption ? dominantOption.bg : "#fff",
@@ -148,7 +149,7 @@ export default function ProgressPage() {
               marginTop: "0.375rem",
             }}
           >
-            {dominantOption ? dominantOption.label : "Sin datos"}
+            {dominantOption ? dominantOption.emoji + " " + dominantOption.label : "Sin datos"}
           </p>
           <p
             style={{
@@ -183,9 +184,24 @@ export default function ProgressPage() {
         >
           Estado de animo por dia
         </h2>
-        <MoodChart records={stats.records} />
 
-        {/* Leyenda */}
+        {recordsWithMood.length === 0 ? (
+          <div
+            style={{
+              height: "180px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.875rem",
+              color: "var(--mc-text-muted)",
+            }}
+          >
+            Registra tu primer dia para ver la grafica.
+          </div>
+        ) : (
+          <MoodChart records={stats.records} />
+        )}
+
         <div
           style={{
             display: "flex",
@@ -232,20 +248,21 @@ export default function ProgressPage() {
             Registro del mes
           </h2>
         </div>
-        <div style={{ maxHeight: "320px", overflowY: "auto" }}>
-          {recordsWithMood.length === 0 ? (
-            <p
-              style={{
-                padding: "2rem",
-                textAlign: "center",
-                fontSize: "0.875rem",
-                color: "var(--mc-text-muted)",
-              }}
-            >
-              No hay entradas registradas este mes.
-            </p>
-          ) : (
-            recordsWithMood
+
+        {recordsWithMood.length === 0 ? (
+          <p
+            style={{
+              padding: "2rem",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              color: "var(--mc-text-muted)",
+            }}
+          >
+            No hay entradas registradas este mes.
+          </p>
+        ) : (
+          <div style={{ maxHeight: "320px", overflowY: "auto" }}>
+            {recordsWithMood
               .slice()
               .reverse()
               .map((record) => {
@@ -271,13 +288,11 @@ export default function ProgressPage() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "0.625rem",
-                        fontWeight: 700,
-                        color: option.color,
+                        fontSize: "1rem",
                         flexShrink: 0,
                       }}
                     >
-                      {option.symbol}
+                      {option.emoji}
                     </span>
                     <div style={{ flex: 1 }}>
                       <p
@@ -302,9 +317,9 @@ export default function ProgressPage() {
                     </span>
                   </div>
                 );
-              })
-          )}
-        </div>
+              })}
+          </div>
+        )}
       </div>
     </div>
   );

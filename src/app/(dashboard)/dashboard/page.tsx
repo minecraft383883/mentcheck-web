@@ -1,64 +1,68 @@
-import Link from "next/link";
-import DashboardCard from "@/components/ui/DashboardCard";
+"use client";
 
-const cards = [
-  {
-    href: "/dashboard/diary",
-    title: "Diario",
-    description: "Registra cómo te sientes hoy",
-    accent: "var(--mc-teal)",
-    bg: "var(--mc-sky)",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/reminders",
-    title: "Recordatorios",
-    description: "Revisa tus pendientes del día",
-    accent: "var(--mc-blue)",
-    bg: "#edf6ff",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/progress",
-    title: "Progreso",
-    description: "Tu evolución del mes",
-    accent: "var(--mc-primary)",
-    bg: "var(--mc-mint)",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-  },
-];
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { MOOD_OPTIONS } from "@/types/diary";
+import { REMINDER_TYPES } from "@/types/reminder";
+
+interface DashboardData {
+  name: string;
+  hasEntryToday: boolean;
+  lastMood: string | null;
+  pendingReminders: { id: string; title: string; type: string; time: string }[];
+  emergencyPhone: string | null;
+}
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Buenos días";
+  if (hour < 12) return "Buenos dias";
   if (hour < 19) return "Buenas tardes";
   return "Buenas noches";
 }
 
+function formatFirstName(fullName: string): string {
+  return fullName.split(" ")[0];
+}
+
 export default function DashboardPage() {
-  const today = new Date().toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  async function fetchDashboard() {
+    try {
+      const res = await fetch("/api/dashboard");
+      const json = await res.json();
+      if (res.ok) setData(json);
+    } catch (error) {
+      console.error("Error al cargar dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: "2rem 1.5rem", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
+        Cargando...
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div style={{ padding: "2rem 1.5rem", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
+        No se pudo cargar el dashboard.
+      </div>
+    );
+  }
+
+  const moodOption = data.lastMood
+    ? MOOD_OPTIONS.find((m) => m.value === data.lastMood)
+    : null;
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "720px" }}>
@@ -72,28 +76,28 @@ export default function DashboardPage() {
             letterSpacing: "-0.01em",
           }}
         >
-          {getGreeting()}
+          {getGreeting()}, {formatFirstName(data.name)}
         </h1>
-        <p
-          style={{
-            fontSize: "0.875rem",
-            color: "var(--mc-text-muted)",
-            marginTop: "0.25rem",
-            textTransform: "capitalize",
-          }}
-        >
-          {today}
+        <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>
+          {new Date().toLocaleDateString("es-MX", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
         </p>
       </div>
 
-      {/* Aviso si no hay entrada hoy */}
+      {/* Tarjeta estado del dia */}
       <div
         style={{
-          padding: "1rem 1.25rem",
-          borderRadius: "0.75rem",
-          backgroundColor: "var(--mc-sky)",
-          border: "1px solid var(--mc-teal)",
-          marginBottom: "2rem",
+          backgroundColor: data.hasEntryToday
+            ? (moodOption?.bg ?? "var(--mc-sky)")
+            : "var(--mc-sky)",
+          border: `1px solid ${data.hasEntryToday ? (moodOption?.color ?? "var(--mc-teal)") : "var(--mc-teal)"}`,
+          borderRadius: "0.875rem",
+          padding: "1.25rem 1.5rem",
+          marginBottom: "1rem",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -101,17 +105,26 @@ export default function DashboardPage() {
         }}
       >
         <div>
-          <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--mc-primary)" }}>
-            No has registrado tu estado de hoy
-          </p>
           <p
             style={{
               fontSize: "0.8125rem",
-              color: "var(--mc-text-secondary)",
-              marginTop: "0.125rem",
+              fontWeight: 500,
+              color: data.hasEntryToday ? moodOption?.color : "var(--mc-primary)",
             }}
           >
-            Toma un momento para escribir en tu diario
+            {data.hasEntryToday ? "Registro de hoy" : "Sin registro hoy"}
+          </p>
+          <p
+            style={{
+              fontSize: "1rem",
+              fontWeight: 600,
+              color: data.hasEntryToday ? moodOption?.color : "var(--mc-primary)",
+              marginTop: "0.25rem",
+            }}
+          >
+            {data.hasEntryToday
+              ? `${moodOption?.emoji ?? ""} ${moodOption?.label ?? data.lastMood}`
+              : "¿Como te sientes hoy?"}
           </p>
         </div>
         <Link
@@ -119,30 +132,191 @@ export default function DashboardPage() {
           style={{
             padding: "0.5rem 1rem",
             borderRadius: "0.5rem",
-            backgroundColor: "var(--mc-primary)",
+            backgroundColor: data.hasEntryToday ? moodOption?.color : "var(--mc-primary)",
             color: "#fff",
             fontSize: "0.8125rem",
             fontWeight: 500,
             textDecoration: "none",
             whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
-          Registrar
+          {data.hasEntryToday ? "Ver diario" : "Registrar"}
         </Link>
       </div>
 
-      {/* Tarjetas */}
+      {/* Recordatorios pendientes */}
+      <div
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid var(--mc-border)",
+          borderRadius: "0.875rem",
+          overflow: "hidden",
+          marginBottom: "1rem",
+        }}
+      >
+        <div
+          style={{
+            padding: "1rem 1.25rem",
+            borderBottom: "1px solid var(--mc-border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
+            Recordatorios pendientes
+          </h2>
+          <Link
+            href="/dashboard/reminders"
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--mc-primary)",
+              textDecoration: "none",
+              fontWeight: 500,
+            }}
+          >
+            Ver todos
+          </Link>
+        </div>
+
+        {data.pendingReminders.length === 0 ? (
+          <p
+            style={{
+              padding: "1.5rem 1.25rem",
+              fontSize: "0.875rem",
+              color: "var(--mc-text-muted)",
+            }}
+          >
+            No tienes recordatorios pendientes.
+          </p>
+        ) : (
+          <div>
+            {data.pendingReminders.map((reminder, index) => {
+              const typeOption = REMINDER_TYPES.find((t) => t.value === reminder.type);
+              return (
+                <div
+                  key={reminder.id}
+                  style={{
+                    padding: "0.875rem 1.25rem",
+                    borderBottom:
+                      index < data.pendingReminders.length - 1
+                        ? "1px solid var(--mc-border)"
+                        : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.875rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: typeOption?.color ?? "var(--mc-border)",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <p
+                    style={{
+                      flex: 1,
+                      fontSize: "0.875rem",
+                      color: "var(--mc-text)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {reminder.title}
+                  </p>
+                  <span style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)" }}>
+                    {reminder.time}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Accesos rapidos */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: "0.75rem",
+          marginBottom: "1rem",
         }}
       >
-        {cards.map((card) => (
-          <DashboardCard key={card.href} {...card} />
+        {[
+          { href: "/dashboard/diary", label: "Diario", desc: "Escribe tu dia" },
+          { href: "/dashboard/reminders", label: "Recordatorios", desc: "Gestiona tus alarmas" },
+          { href: "/dashboard/progress", label: "Progreso", desc: "Ve tus estadisticas" },
+          { href: "/dashboard/profile", label: "Perfil", desc: "Edita tus datos" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              backgroundColor: "#fff",
+              border: "1px solid var(--mc-border)",
+              borderRadius: "0.875rem",
+              padding: "1rem",
+              textDecoration: "none",
+              display: "block",
+              transition: "border-color 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-teal)";
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow =
+                "0 2px 8px rgba(0,0,0,0.06)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-border)";
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
+            }}
+          >
+            <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--mc-text)" }}>
+              {item.label}
+            </p>
+            <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>
+              {item.desc}
+            </p>
+          </Link>
         ))}
       </div>
+
+      {/* Boton emergencia */}
+      {data.emergencyPhone && (
+        <a
+          href={`tel:${data.emergencyPhone}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.625rem",
+            width: "100%",
+            padding: "0.875rem",
+            borderRadius: "0.875rem",
+            border: "1.5px solid #e53e3e",
+            backgroundColor: "#fff5f5",
+            color: "#c53030",
+            fontSize: "0.9375rem",
+            fontWeight: 600,
+            textDecoration: "none",
+            transition: "background-color 0.15s",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = "#fed7d7")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLAnchorElement).style.backgroundColor = "#fff5f5")
+          }
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+          </svg>
+          Llamar contacto de emergencia
+        </a>
+      )}
     </div>
   );
 }

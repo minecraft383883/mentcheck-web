@@ -18,24 +18,31 @@ export default function ReminderForm({ onSave, onCancel }: ReminderFormProps) {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 600));
+  try {
+    const res = await fetch("/api/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, title, time, repeat }),
+    });
 
-    const reminder: Reminder = {
-      id: Date.now().toString(),
-      type,
-      title: title.trim() || REMINDER_TYPES.find((t) => t.value === type)!.label,
-      time,
-      repeat,
-      status: "pendiente",
-      createdAt: new Date().toISOString(),
-    };
+    const data = await res.json();
 
-    onSave(reminder);
+    if (!res.ok) {
+      console.error("Error al guardar:", data.error);
+      return;
+    }
+
+    onSave(data.reminder);
+  } catch (error) {
+    console.error("Error de red:", error);
+  } finally {
     setLoading(false);
   }
+}
+
 
   return (
     <form
