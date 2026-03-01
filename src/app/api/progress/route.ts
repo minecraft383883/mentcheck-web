@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -7,7 +7,7 @@ const MONTH_NAMES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -23,9 +23,15 @@ export async function GET() {
     }
 
     const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const todayDay = now.getUTCDate();
+    const searchParams = req.nextUrl.searchParams;
+    const qMonth = searchParams.get("month");
+    const qYear = searchParams.get("year");
+
+    const year = qYear ? parseInt(qYear, 10) : now.getUTCFullYear();
+    const month = qMonth ? parseInt(qMonth, 10) : now.getUTCMonth();
+    const todayDay = (year === now.getUTCFullYear() && month === now.getUTCMonth())
+      ? now.getUTCDate()
+      : 0; // 0 = no calcular racha en meses pasados
 
     const firstDay = new Date(Date.UTC(year, month, 1));
     const lastDay = new Date(Date.UTC(year, month + 1, 0));
@@ -50,14 +56,12 @@ export async function GET() {
       };
     });
 
-    // Calcular racha: dias consecutivos hacia atras desde hoy
+    // Racha solo en el mes actual
     let streak = 0;
-    for (let d = todayDay; d >= 1; d--) {
-      const record = records[d - 1];
-      if (record?.mood) {
-        streak++;
-      } else {
-        break;
+    if (todayDay > 0) {
+      for (let d = todayDay; d >= 1; d--) {
+        if (records[d - 1]?.mood) streak++;
+        else break;
       }
     }
 
@@ -68,7 +72,6 @@ export async function GET() {
 
     const dominantMood =
       Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-
     const daysWithEntry = records.filter((r) => r.mood !== null).length;
 
     return NextResponse.json({
