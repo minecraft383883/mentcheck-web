@@ -19,7 +19,6 @@ export async function GET(
       return NextResponse.json({ error: "No autorizado." }, { status: 401 });
     }
 
-    // Verificar que el usuario es terapeuta
     const therapist = await prisma.therapistProfile.findUnique({
       where: { userId: session.user.id },
     });
@@ -28,7 +27,6 @@ export async function GET(
       return NextResponse.json({ error: "Perfil de psicologo no encontrado." }, { status: 403 });
     }
 
-    // Verificar que el paciente esta vinculado con este terapeuta
     const relation = await prisma.therapistPatient.findUnique({
       where: {
         therapistProfileId_patientProfileId: {
@@ -42,7 +40,6 @@ export async function GET(
       return NextResponse.json({ error: "Paciente no encontrado." }, { status: 404 });
     }
 
-    // Obtener el perfil del paciente con datos del usuario
     const patient = await prisma.patientProfile.findUnique({
       where: { id },
       include: {
@@ -54,13 +51,13 @@ export async function GET(
       return NextResponse.json({ error: "Perfil de paciente no encontrado." }, { status: 404 });
     }
 
-    // Calcular registros del mes actual
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    const firstDay = new Date(Date.UTC(year, month, 1));
+    const lastDay = new Date(Date.UTC(year, month + 1, 0));
+    const daysInMonth = lastDay.getUTCDate();
 
     const entries = await prisma.diaryEntry.findMany({
       where: {
@@ -70,12 +67,10 @@ export async function GET(
       orderBy: { date: "asc" },
     });
 
-    const daysInMonth = lastDay.getDate();
-
     const records = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const entry = entries.find((e) => new Date(e.date).getDate() === day);
+      const entry = entries.find((e) => new Date(e.date).getUTCDate() === day);
 
       return {
         date: dateStr,
