@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
 export async function GET() {
   try {
     const session = await auth();
@@ -18,32 +23,25 @@ export async function GET() {
     }
 
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    const firstDay = new Date(Date.UTC(year, month, 1));
+    const lastDay = new Date(Date.UTC(year, month + 1, 0));
+    const daysInMonth = lastDay.getUTCDate();
 
     const entries = await prisma.diaryEntry.findMany({
       where: {
         patientProfileId: profile.id,
-        date: {
-          gte: firstDay,
-          lte: lastDay,
-        },
+        date: { gte: firstDay, lte: lastDay },
       },
       orderBy: { date: "asc" },
     });
 
-    const daysInMonth = lastDay.getDate();
-
     const records = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const entry = entries.find((e) => {
-        const entryDate = new Date(e.date);
-        return entryDate.getDate() === day;
-      });
+      const entry = entries.find((e) => new Date(e.date).getUTCDate() === day);
 
       return {
         date: dateStr,
@@ -62,13 +60,8 @@ export async function GET() {
 
     const daysWithEntry = records.filter((r) => r.mood !== null).length;
 
-    const monthNames = [
-      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-    ];
-
     return NextResponse.json({
-      month: monthNames[month],
+      month: MONTH_NAMES[month],
       year,
       records,
       dominantMood,
