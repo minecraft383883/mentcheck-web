@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PatientProfile } from "@/types/profile";
@@ -47,10 +48,7 @@ export default function ProfilePage() {
     setProfile((prev) => ({ ...prev, [field]: value }));
   }
 
-  function updateEmergency(
-    field: keyof PatientProfile["emergencyContact"],
-    value: string
-  ) {
+  function updateEmergency(field: keyof PatientProfile["emergencyContact"], value: string) {
     setProfile((prev) => ({
       ...prev,
       emergencyContact: { ...prev.emergencyContact, [field]: value },
@@ -61,21 +59,14 @@ export default function ProfilePage() {
     e.preventDefault();
     setError("");
     setSaving(true);
-
     try {
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Ocurrio un error al guardar.");
-        return;
-      }
-
+      if (!res.ok) { setError(data.error || "Ocurrio un error al guardar."); return; }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -91,21 +82,14 @@ export default function ProfilePage() {
     setLinkError("");
     setLinkSuccess("");
     setLinking(true);
-
     try {
       const res = await fetch("/api/patient/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: linkCode }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setLinkError(data.error || "Ocurrio un error.");
-        return;
-      }
-
+      if (!res.ok) { setLinkError(data.error || "Ocurrio un error."); return; }
       setLinkSuccess(`Vinculado correctamente con ${data.therapistName}.`);
       setLinkCode("");
     } catch {
@@ -182,12 +166,9 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Contenido */}
+      {/* Contenido de tabs */}
       {activeSection !== "link" ? (
-        <form
-          onSubmit={handleSubmit}
-          style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem" }}
-        >
+        <form onSubmit={handleSubmit} style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem" }}>
           {activeSection === "personal" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
               <Input label="Nombre completo" type="text" value={profile.name} onChange={(e) => updateField("name", e.target.value)} required />
@@ -196,7 +177,6 @@ export default function ProfilePage() {
               <Input label="Fecha de nacimiento" type="date" value={profile.birthdate} onChange={(e) => updateField("birthdate", e.target.value)} />
             </div>
           )}
-
           {activeSection === "emergency" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
               <div style={{ padding: "0.875rem 1rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "0.625rem", fontSize: "0.8125rem", color: "#c53030", lineHeight: 1.5 }}>
@@ -207,23 +187,18 @@ export default function ProfilePage() {
               <Input label="Relacion" type="text" value={profile.emergencyContact.relationship} onChange={(e) => updateEmergency("relationship", e.target.value)} placeholder="Familiar, amigo, terapeuta..." />
             </div>
           )}
-
           {error && (
             <div style={{ marginTop: "1.25rem", padding: "0.625rem 1rem", borderRadius: "0.5rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", fontSize: "0.8125rem", color: "#c53030" }}>
               {error}
             </div>
           )}
-
           {saved && (
             <div style={{ marginTop: "1.25rem", padding: "0.625rem 1rem", borderRadius: "0.5rem", backgroundColor: "#f0fff4", border: "1px solid #9ae6b4", fontSize: "0.8125rem", color: "#276749" }}>
               Cambios guardados correctamente.
             </div>
           )}
-
           <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" variant="primary" loading={saving}>
-              Guardar cambios
-            </Button>
+            <Button type="submit" variant="primary" loading={saving}>Guardar cambios</Button>
           </div>
         </form>
       ) : (
@@ -232,14 +207,7 @@ export default function ProfilePage() {
             <div style={{ padding: "0.875rem 1rem", backgroundColor: "var(--mc-sky)", border: "1px solid var(--mc-teal)", borderRadius: "0.625rem", fontSize: "0.8125rem", color: "var(--mc-primary)", lineHeight: 1.5 }}>
               Ingresa el codigo que te dio tu psicologo para que pueda ver tu progreso desde su panel.
             </div>
-            <Input
-              label="Codigo de invitacion"
-              type="text"
-              value={linkCode}
-              onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
-              placeholder="Ej. AB3DEFGH"
-              required
-            />
+            <Input label="Codigo de invitacion" type="text" value={linkCode} onChange={(e) => setLinkCode(e.target.value.toUpperCase())} placeholder="Ej. AB3DEFGH" required />
             {linkError && (
               <div style={{ padding: "0.625rem 1rem", borderRadius: "0.5rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", fontSize: "0.8125rem", color: "#c53030" }}>
                 {linkError}
@@ -251,13 +219,48 @@ export default function ProfilePage() {
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" variant="primary" loading={linking}>
-                Vincular
-              </Button>
+              <Button type="submit" variant="primary" loading={linking}>Vincular</Button>
             </div>
           </form>
         </div>
       )}
+
+      {/* Cerrar sesion — visible en mobile, redundante pero util en desktop */}
+      <div
+        className="profile-signout"
+        style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--mc-border)" }}
+      >
+        <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 500 }}>
+          Sesion
+        </p>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          style={{
+            width: "100%",
+            padding: "0.75rem 1rem",
+            borderRadius: "0.625rem",
+            border: "1px solid #fed7d7",
+            backgroundColor: "#fff5f5",
+            color: "#c53030",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.625rem",
+            transition: "background-color 0.15s",
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fed7d7")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff5f5")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Cerrar sesion
+        </button>
+      </div>
     </div>
   );
 }
