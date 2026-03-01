@@ -2,18 +2,18 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
+  ...authConfig,
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
       }
+      // Recuperar role desde DB si no esta en el token aun
       if (!token.role && token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
@@ -22,13 +22,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (dbUser) token.role = dbUser.role;
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        (session.user as { id?: string; role?: string }).id = token.id as string;
-        (session.user as { id?: string; role?: string }).role = token.role as string;
-      }
-      return session;
     },
   },
   providers: [
