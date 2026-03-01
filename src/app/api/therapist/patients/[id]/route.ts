@@ -9,9 +9,11 @@ const MONTH_NAMES = [
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401 });
@@ -31,7 +33,7 @@ export async function GET(
       where: {
         therapistProfileId_patientProfileId: {
           therapistProfileId: therapist.id,
-          patientProfileId: params.id,
+          patientProfileId: id,
         },
       },
     });
@@ -42,7 +44,7 @@ export async function GET(
 
     // Obtener el perfil del paciente con datos del usuario
     const patient = await prisma.patientProfile.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: { select: { name: true, email: true } },
       },
