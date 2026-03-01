@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, role } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -30,16 +30,17 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const userRole = role === "THERAPIST" ? "THERAPIST" : "PATIENT";
 
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: "PATIENT",
-        patientProfile: {
-          create: {},
-        },
+        role: userRole,
+        ...(userRole === "PATIENT"
+          ? { patientProfile: { create: {} } }
+          : { therapistProfile: { create: {} } }),
       },
     });
 
