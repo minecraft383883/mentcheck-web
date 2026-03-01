@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import MoodChart from "@/components/stats/MoodChart";
 import MonthSelector from "@/components/ui/MonthSelector";
-import { MOOD_OPTIONS } from "@/types/diary";
+import { MOOD_OPTIONS, Mood } from "@/types/diary";
+import { DailyMoodRecord } from "@/types/stats";
 
 interface PatientDetail {
   id: string;
@@ -44,6 +45,14 @@ function formatDateLong(dateStr: string): string {
     month: "long",
     year: "numeric",
   });
+}
+
+function toMoodRecords(records: PatientDetail["records"]): DailyMoodRecord[] {
+  return records.map((r) => ({
+    date: r.date,
+    mood: (r.mood as Mood | null),
+    hasNote: r.hasNote,
+  }));
 }
 
 async function downloadPDF(patient: PatientDetail) {
@@ -273,9 +282,7 @@ export default function PatientDetailPage() {
 
       {/* Selector de mes */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
-          Seguimiento mensual
-        </h2>
+        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Seguimiento mensual</h2>
         <MonthSelector month={selectedMonth} year={selectedYear} onChange={handleMonthChange} />
       </div>
 
@@ -302,7 +309,7 @@ export default function PatientDetailPage() {
         {recordsWithMood.length === 0 ? (
           <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Sin registros este mes.</div>
         ) : (
-          <MoodChart records={patient.records} />
+          <MoodChart records={toMoodRecords(patient.records)} />
         )}
       </div>
 
