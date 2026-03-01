@@ -17,6 +17,16 @@ interface PatientDetail {
   records: { date: string; mood: string | null; note: string | null; hasNote: boolean }[];
 }
 
+const MOOD_LABELS: Record<string, string> = {
+  alegria: "Alegr\u00eda",
+  tristeza: "Tristeza",
+  enojo: "Enojo",
+  miedo: "Miedo",
+  tedio: "Tedio",
+  ansiedad: "Ansiedad",
+  no_lo_se: "No lo s\u00e9",
+};
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
     weekday: "short",
@@ -25,10 +35,186 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatDateLong(dateStr: string): string {
+  if (!dateStr) return "No registrada";
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+async function downloadPDF(patient: PatientDetail) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  const PRIMARY = [27, 73, 101] as [number, number, number];
+  const SKY = [202, 233, 255] as [number, number, number];
+  const MUTED = [100, 100, 100] as [number, number, number];
+  const DARK = [30, 30, 30] as [number, number, number];
+  const WHITE = [255, 255, 255] as [number, number, number];
+
+  const recordsWithMood = patient.records.filter((r) => r.mood !== null);
+  const daysWithEntry = recordsWithMood.length;
+  const percentage = Math.round((daysWithEntry / patient.records.length) * 100);
+  const moodCounts: Record<string, number> = {};
+  recordsWithMood.forEach((r) => {
+    if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
+  });
+  const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  // — Encabezado —
+  doc.setFillColor(...PRIMARY);
+  doc.rect(0, 0, 210, 32, "F");
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("Mentcheck", 14, 14);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Agenda terap\u00e9utica", 14, 20);
+  doc.setFontSize(11);
+  doc.text("Reporte del Paciente", 14, 28);
+
+  // Fecha de generacion (derecha)
+  const today = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+  doc.setFontSize(8);
+  doc.text(`Generado: ${today}`, 196, 28, { align: "right" });
+
+  let y = 44;
+
+  // — Datos personales —
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Datos del paciente", 14, y);
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.setLineWidth(0.4);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
+  const personalData: [string, string][] = [
+    ["Nombre", patient.name || "No registrado"],
+    ["Correo", patient.email || "No registrado"],
+    ["Tel\u00e9fono", patient.phone || "No registrado"],
+    ["Fecha de nacimiento", formatDateLong(patient.birthdate)],
+  ];
+
+  personalData.forEach(([label, value]) => {
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MUTED);
+    doc.text(label + ":", 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.text(value, 58, y);
+    y += 6.5;
+  });
+
+  y += 4;
+
+  // — Resumen mensual —
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Resumen \u2014 ${patient.month} ${patient.year}`, 14, y);
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
+  const summaryData: [string, string][] = [
+    ["D\u00edas registrados", `${daysWithEntry} de ${patient.records.length} d\u00edas (${percentage}%)`],
+    ["Emoci\u00f3n predominante", dominantMood ? (MOOD_LABELS[dominantMood] ?? dominantMood) : "Sin datos"],
+  ];
+
+  summaryData.forEach(([label, value]) => {
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MUTED);
+    doc.text(label + ":", 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.text(value, 68, y);
+    y += 6.5;
+  });
+
+  y += 4;
+
+  // — Tabla de registros —
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Registro del mes", 14, y);
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
+  // Cabecera de tabla
+  doc.setFillColor(...SKY);
+  doc.rect(14, y - 5, 182, 7, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PRIMARY);
+  doc.text("Fecha", 16, y);
+  doc.text("Estado de \u00e1nimo", 70, y);
+  doc.text("Nota", 130, y);
+  y += 5;
+
+  const sortedRecords = recordsWithMood.slice().reverse();
+  sortedRecords.forEach((record, idx) => {
+    if (y > 272) {
+      doc.addPage();
+      y = 20;
+    }
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 252, 255);
+      doc.rect(14, y - 4, 182, 6.5, "F");
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.setFontSize(8);
+
+    const dateLabel = new Date(record.date + "T12:00:00").toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "short",
+    });
+    doc.text(dateLabel, 16, y);
+    doc.text(MOOD_LABELS[record.mood!] ?? record.mood!, 70, y);
+    if (record.note) {
+      const note = record.note.length > 38 ? record.note.substring(0, 35) + "..." : record.note;
+      doc.text(note, 130, y);
+    }
+    y += 6.5;
+  });
+
+  if (recordsWithMood.length === 0) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text("No hay registros este mes.", 14, y);
+  }
+
+  // — Footer —
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text("Mentcheck \u2014 Agenda terap\u00e9utica", 14, 291);
+    doc.text(`P\u00e1gina ${i} de ${pageCount}`, 196, 291, { align: "right" });
+  }
+
+  const filename = `mentcheck-${patient.name.replace(/\s+/g, "-").toLowerCase()}-${patient.month.toLowerCase()}-${patient.year}.pdf`;
+  doc.save(filename);
+}
+
 export default function PatientDetailPage() {
   const params = useParams();
   const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
@@ -38,6 +224,16 @@ export default function PatientDetailPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [params.id]);
+
+  async function handleDownloadPDF() {
+    if (!patient) return;
+    setGenerating(true);
+    try {
+      await downloadPDF(patient);
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   if (loading) {
     return <div style={{ padding: "2rem 1.5rem", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</div>;
@@ -50,16 +246,14 @@ export default function PatientDetailPage() {
   const recordsWithMood = patient.records.filter((r) => r.mood !== null);
   const daysWithEntry = recordsWithMood.length;
   const percentage = Math.round((daysWithEntry / patient.records.length) * 100);
-
   const moodCounts: Record<string, number> = {};
-  recordsWithMood.forEach((r) => {
-    if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
-  });
+  recordsWithMood.forEach((r) => { if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1; });
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const dominantOption = dominantMood ? MOOD_OPTIONS.find((m) => m.value === dominantMood) : null;
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "720px" }}>
+
       {/* Encabezado */}
       <div style={{ marginBottom: "1.75rem" }}>
         <Link href="/therapist" style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.375rem", marginBottom: "1rem" }}>
@@ -68,14 +262,67 @@ export default function PatientDetailPage() {
           </svg>
           Mis pacientes
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "var(--mc-sky)", border: "2px solid var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", fontWeight: 700, color: "var(--mc-primary)", flexShrink: 0 }}>
-            {patient.name.charAt(0).toUpperCase()}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "var(--mc-sky)", border: "2px solid var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", fontWeight: 700, color: "var(--mc-primary)", flexShrink: 0 }}>
+              {patient.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--mc-text)" }}>{patient.name}</h1>
+              <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)" }}>{patient.email}</p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--mc-text)" }}>{patient.name}</h1>
-            <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)" }}>{patient.email}</p>
-          </div>
+          {/* Boton PDF */}
+          <button
+            onClick={handleDownloadPDF}
+            disabled={generating}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.5rem 1rem",
+              borderRadius: "0.5rem",
+              border: "1px solid var(--mc-teal)",
+              backgroundColor: generating ? "var(--mc-surface)" : "var(--mc-sky)",
+              color: "var(--mc-primary)",
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              cursor: generating ? "not-allowed" : "pointer",
+              transition: "background-color 0.15s",
+              opacity: generating ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => { if (!generating) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--mc-teal)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
+            onMouseLeave={(e) => { if (!generating) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--mc-sky)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-primary)"; } }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {generating ? "Generando..." : "Descargar PDF"}
+          </button>
+        </div>
+      </div>
+
+      {/* Datos personales */}
+      <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.25rem" }}>
+        <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "1rem" }}>
+          Datos personales
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+          {[
+            { label: "Tel\u00e9fono", value: patient.phone || "No registrado", icon: "📞" },
+            { label: "Fecha de nacimiento", value: patient.birthdate ? formatDateLong(patient.birthdate) : "No registrada", icon: "🎂" },
+            { label: "Correo", value: patient.email, icon: "✉️" },
+          ].map((item) => (
+            <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+              <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>{item.icon}</span>
+              <div>
+                <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{item.label}</p>
+                <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{item.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
