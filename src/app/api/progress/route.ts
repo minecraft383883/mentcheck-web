@@ -25,6 +25,7 @@ export async function GET() {
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth();
+    const todayDay = now.getUTCDate();
 
     const firstDay = new Date(Date.UTC(year, month, 1));
     const lastDay = new Date(Date.UTC(year, month + 1, 0));
@@ -42,13 +43,23 @@ export async function GET() {
       const day = i + 1;
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const entry = entries.find((e) => new Date(e.date).getUTCDate() === day);
-
       return {
         date: dateStr,
         mood: entry?.mood ?? null,
         hasNote: !!entry?.note,
       };
     });
+
+    // Calcular racha: dias consecutivos hacia atras desde hoy
+    let streak = 0;
+    for (let d = todayDay; d >= 1; d--) {
+      const record = records[d - 1];
+      if (record?.mood) {
+        streak++;
+      } else {
+        break;
+      }
+    }
 
     const moodCounts: Record<string, number> = {};
     records.forEach((r) => {
@@ -67,6 +78,7 @@ export async function GET() {
       dominantMood,
       daysWithEntry,
       totalDays: daysInMonth,
+      streak,
     });
   } catch (error) {
     console.error("Error al obtener progreso:", error);
