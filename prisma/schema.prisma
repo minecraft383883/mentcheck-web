@@ -50,26 +50,30 @@ model User {
 }
 
 model PatientProfile {
-  id               String            @id @default(cuid())
-  userId           String            @unique
+  id               String             @id @default(cuid())
+  userId           String             @unique
   phone            String?
   birthdate        DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  therapistId      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   emergencyContact EmergencyContact?
   diaryEntries     DiaryEntry[]
   reminders        Reminder[]
+  therapists       TherapistPatient[]
 }
 
 model TherapistProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inviteCodes      InviteCode[]
+  patients         TherapistPatient[]
 }
 
 model EmergencyContact {
@@ -146,4 +150,28 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model InviteCode {
+  id                 String            @id @default(cuid())
+  code               String            @unique
+  therapistProfileId String
+  used               Boolean           @default(false)
+  usedByProfileId    String?
+  expiresAt          DateTime
+  createdAt          DateTime          @default(now())
+
+  therapistProfile   TherapistProfile  @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+}
+
+model TherapistPatient {
+  id                 String            @id @default(cuid())
+  therapistProfileId String
+  patientProfileId   String
+  createdAt          DateTime          @default(now())
+
+  therapistProfile   TherapistProfile  @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+  patientProfile     PatientProfile    @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([therapistProfileId, patientProfileId])
 }

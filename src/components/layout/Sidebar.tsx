@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   {
@@ -63,11 +64,34 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: session} = useSession();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [emergencyPhone, setEmergencyPhone] = useState<string | null>(null);
+  const [emergencyName, setEmergencyName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.emergencyContact?.phone) {
+          setEmergencyPhone(data.emergencyContact.phone);
+          setEmergencyName(data.emergencyContact.name || null);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  function handleEmergency() {
+    if (emergencyPhone) {
+      window.location.href = `tel:${emergencyPhone}`;
+    } else {
+      router.push("/dashboard/profile");
+    }
+  }
 
   return (
     <>
-      {/* Sidebar desktop — solo visible en pantallas >= 768px */}
+      {/* Sidebar desktop */}
       <aside
         className="sidebar-desktop"
         style={{
@@ -83,20 +107,8 @@ export default function Sidebar() {
         }}
       >
         {/* Logo */}
-        <div
-          style={{
-            padding: "1.5rem 1.25rem 1.25rem",
-            borderBottom: "1px solid var(--mc-border)",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: 600,
-              color: "var(--mc-primary)",
-              letterSpacing: "-0.01em",
-            }}
-          >
+        <div style={{ padding: "1.5rem 1.25rem 1.25rem", borderBottom: "1px solid var(--mc-border)" }}>
+          <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-primary)", letterSpacing: "-0.01em" }}>
             Mentcheck
           </p>
           <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>
@@ -105,15 +117,7 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav
-          style={{
-            flex: 1,
-            padding: "1rem 0.75rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-          }}
-        >
+        <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
@@ -134,12 +138,10 @@ export default function Sidebar() {
                   transition: "background-color 0.15s, color 0.15s",
                 }}
                 onMouseEnter={(e) => {
-                  if (!active)
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--mc-surface)";
+                  if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--mc-surface)";
                 }}
                 onMouseLeave={(e) => {
-                  if (!active)
-                    (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent";
+                  if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent";
                 }}
               >
                 {item.icon}
@@ -149,137 +151,106 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Boton emergencia */}
+        {/* Footer */}
         <div style={{ borderTop: "1px solid var(--mc-border)" }}>
-  {/* Info del usuario */}
-  <div
-    style={{
-      padding: "0.875rem 1rem",
-      display: "flex",
-      alignItems: "center",
-      gap: "0.625rem",
-      borderBottom: "1px solid var(--mc-border)",
-    }}
-  >
-    <div
-      style={{
-        width: "30px",
-        height: "30px",
-        borderRadius: "50%",
-        backgroundColor: "var(--mc-sky)",
-        border: "1.5px solid var(--mc-teal)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "0.75rem",
-        fontWeight: 700,
-        color: "var(--mc-primary)",
-        flexShrink: 0,
-      }}
-    >
-      {session?.user?.name?.charAt(0).toUpperCase() ?? "?"}
-    </div>
-    <div style={{ minWidth: 0 }}>
-      <p
-        style={{
-          fontSize: "0.8125rem",
-          fontWeight: 500,
-          color: "var(--mc-text)",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {session?.user?.name ?? "Usuario"}
-      </p>
-      <p
-        style={{
-          fontSize: "0.6875rem",
-          color: "var(--mc-text-muted)",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {session?.user?.email ?? ""}
-      </p>
-    </div>
-  </div>
+          {/* Info del usuario */}
+          <div style={{ padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.625rem", borderBottom: "1px solid var(--mc-border)" }}>
+            <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "var(--mc-sky)", border: "1.5px solid var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--mc-primary)", flexShrink: 0 }}>
+              {session?.user?.name?.charAt(0).toUpperCase() ?? "?"}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {session?.user?.name ?? "Usuario"}
+              </p>
+              <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {session?.user?.email ?? ""}
+              </p>
+            </div>
+          </div>
 
-  {/* Boton emergencia */}
-  <div style={{ padding: "0.75rem" }}>
-    <button
-      style={{
-        width: "100%",
-        padding: "0.625rem",
-        borderRadius: "0.5rem",
-        border: "1.5px solid #e53e3e",
-        backgroundColor: "#fff5f5",
-        color: "#c53030",
-        fontSize: "0.8125rem",
-        fontWeight: 500,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.5rem",
-        transition: "background-color 0.15s",
-        marginBottom: "0.5rem",
-      }}
-      onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fed7d7")
-      }
-      onMouseLeave={(e) =>
-        ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff5f5")
-      }
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-      </svg>
-      Linea de emergencia
-    </button>
+          {/* Botones */}
+          <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {/* Boton emergencia */}
+            <button
+              onClick={handleEmergency}
+              title={emergencyPhone ? `Llamar a ${emergencyName ?? emergencyPhone}` : "Configura un contacto de emergencia en tu perfil"}
+              style={{
+                width: "100%",
+                padding: "0.625rem",
+                borderRadius: "0.5rem",
+                border: "1.5px solid #e53e3e",
+                backgroundColor: "#fff5f5",
+                color: "#c53030",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                transition: "background-color 0.15s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fed7d7")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff5f5")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              {emergencyPhone
+                ? `Llamar a ${emergencyName ?? emergencyPhone}`
+                : "Linea de emergencia"}
+            </button>
 
-    {/* Cerrar sesion */}
-    <button
-      onClick={() => signOut({ callbackUrl: "/login" })}
-      style={{
-        width: "100%",
-        padding: "0.625rem",
-        borderRadius: "0.5rem",
-        border: "1px solid var(--mc-border)",
-        backgroundColor: "transparent",
-        color: "var(--mc-text-muted)",
-        fontSize: "0.8125rem",
-        fontWeight: 400,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.5rem",
-        transition: "all 0.15s",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--mc-surface)";
-        (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-        (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text-muted)";
-      }}
-    >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-        <polyline points="16 17 21 12 16 7" />
-        <line x1="21" y1="12" x2="9" y2="12" />
-      </svg>
-      Cerrar sesion
-    </button>
-  </div>
-</div>
+            {/* Alerta si no hay contacto configurado */}
+            {!emergencyPhone && (
+              <p style={{ fontSize: "0.6875rem", color: "#c53030", textAlign: "center", lineHeight: 1.4 }}>
+                Configura tu contacto en{" "}
+                <Link href="/dashboard/profile" style={{ color: "#c53030", fontWeight: 500 }}>
+                  Perfil
+                </Link>
+              </p>
+            )}
 
+            {/* Cerrar sesion */}
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              style={{
+                width: "100%",
+                padding: "0.625rem",
+                borderRadius: "0.5rem",
+                border: "1px solid var(--mc-border)",
+                backgroundColor: "transparent",
+                color: "var(--mc-text-muted)",
+                fontSize: "0.8125rem",
+                fontWeight: 400,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--mc-surface)";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text-muted)";
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Cerrar sesion
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* Nav inferior mobile — solo visible en pantallas < 768px */}
+      {/* Nav inferior mobile */}
       <nav
         className="sidebar-mobile"
         style={{
@@ -318,6 +289,31 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Boton emergencia mobile */}
+        <button
+          onClick={handleEmergency}
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0.625rem 0.25rem",
+            gap: "0.25rem",
+            color: "#c53030",
+            fontSize: "0.6875rem",
+            fontWeight: 500,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+          </svg>
+          SOS
+        </button>
       </nav>
     </>
   );

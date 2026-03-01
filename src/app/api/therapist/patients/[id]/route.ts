@@ -7,19 +7,43 @@ const MONTH_NAMES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado." }, { status: 401 });
     }
 
-    const profile = await prisma.patientProfile.findUnique({
+    const therapist = await prisma.therapistProfile.findUnique({
       where: { userId: session.user.id },
     });
+    if (!therapist) {
+      return NextResponse.json({ error: "Perfil de psicologo no encontrado." }, { status: 403 });
+    }
 
-    if (!profile) {
-      return NextResponse.json({ error: "Perfil no encontrado." }, { status: 404 });
+    const relation = await prisma.therapistPatient.findUnique({
+      where: {
+        therapistProfileId_patientProfileId: {
+          therapistProfileId: therapist.id,
+          patientProfileId: id,
+        },
+      },
+    });
+    if (!relation) {
+      return NextResponse.json({ error: "Paciente no encontrado." }, { status: 404 });
+    }
+
+    const patient = await prisma.patientProfile.findUnique({
+      where: { id },
+      include: { user: { select: { name: true, email: true } } },
+    });
+    if (!patient) {
+      return NextResponse.json({ error: "Perfil de paciente no encontrado." }, { status: 404 });
     }
 
     const now = new Date();
@@ -29,9 +53,6 @@ export async function GET(req: NextRequest) {
 
     const year = qYear ? parseInt(qYear, 10) : now.getUTCFullYear();
     const month = qMonth ? parseInt(qMonth, 10) : now.getUTCMonth();
-    const todayDay = (year === now.getUTCFullYear() && month === now.getUTCMonth())
-      ? now.getUTCDate()
-      : 0; // 0 = no calcular racha en meses pasados
 
     const firstDay = new Date(Date.UTC(year, month, 1));
     const lastDay = new Date(Date.UTC(year, month + 1, 0));
@@ -39,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const entries = await prisma.diaryEntry.findMany({
       where: {
-        patientProfileId: profile.id,
+        patientProfileId: patient.id,
         date: { gte: firstDay, lte: lastDay },
       },
       orderBy: { date: "asc" },
@@ -52,39 +73,24 @@ export async function GET(req: NextRequest) {
       return {
         date: dateStr,
         mood: entry?.mood ?? null,
+        note: entry?.note ?? null,
         hasNote: !!entry?.note,
       };
     });
 
-    // Racha solo en el mes actual
-    let streak = 0;
-    if (todayDay > 0) {
-      for (let d = todayDay; d >= 1; d--) {
-        if (records[d - 1]?.mood) streak++;
-        else break;
-      }
-    }
-
-    const moodCounts: Record<string, number> = {};
-    records.forEach((r) => {
-      if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
-    });
-
-    const dominantMood =
-      Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const daysWithEntry = records.filter((r) => r.mood !== null).length;
-
     return NextResponse.json({
+      id: patient.id,
+      name: patient.user.name,
+      email: patient.user.email,
+      phone: patient.phone ?? "",
+      birthdate: patient.birthdate ? patient.birthdate.toISOString().split("T")[0] : "",
       month: MONTH_NAMES[month],
+      monthIndex: month,
       year,
       records,
-      dominantMood,
-      daysWithEntry,
-      totalDays: daysInMonth,
-      streak,
     });
   } catch (error) {
-    console.error("Error al obtener progreso:", error);
+    console.error("Error al obtener detalle del paciente:", error);
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
   }
 }

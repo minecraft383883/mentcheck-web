@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
+type Role = "PATIENT" | "THERAPIST";
+
 export default function RegisterPage() {
   const router = useRouter();
+  const [role, setRole] = useState<Role>("PATIENT");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +26,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, role }),
       });
 
       const data = await res.json();
@@ -70,10 +73,46 @@ export default function RegisterPage() {
           Crear cuenta
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--mc-text-muted)" }}>
-          Completa tus datos para comenzar
+          Selecciona tu tipo de cuenta para comenzar
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+        {/* Selector de rol */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            marginTop: "1.5rem",
+            backgroundColor: "var(--mc-surface)",
+            border: "1px solid var(--mc-border)",
+            borderRadius: "0.625rem",
+            padding: "0.25rem",
+          }}
+        >
+          {(["PATIENT", "THERAPIST"] as Role[]).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              style={{
+                flex: 1,
+                padding: "0.5rem 0.75rem",
+                borderRadius: "0.375rem",
+                fontSize: "0.875rem",
+                fontWeight: role === r ? 500 : 400,
+                color: role === r ? "var(--mc-primary)" : "var(--mc-text-secondary)",
+                backgroundColor: role === r ? "#fff" : "transparent",
+                border: role === r ? "1px solid var(--mc-border)" : "1px solid transparent",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                boxShadow: role === r ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+              }}
+            >
+              {r === "PATIENT" ? "Paciente" : "Psicólogo"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-5">
           <Input
             label="Nombre completo"
             type="text"

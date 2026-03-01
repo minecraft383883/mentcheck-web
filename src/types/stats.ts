@@ -13,4 +13,5 @@ export interface MonthlyStats {
   dominantMood: Mood | null;
   daysWithEntry: number;
   totalDays: number;
+  streak: number;
 }
