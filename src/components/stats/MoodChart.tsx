@@ -88,6 +88,14 @@ export function MoodDayChart({ records }: MoodChartProps) {
 
 // ─── Gráfica de frecuencia ──────────────────────────────────────────
 
+interface FreqDataPoint {
+  mood: string;
+  label: string;
+  emoji: string;
+  count: number;
+  color: string;
+}
+
 interface MoodFreqChartProps {
   moodCounts: Record<string, number>;
   chartType: "bar" | "pie";
@@ -95,7 +103,7 @@ interface MoodFreqChartProps {
 
 interface FreqTooltipProps {
   active?: boolean;
-  payload?: { payload: { mood: string; count: number; color: string; label: string; emoji: string } }[];
+  payload?: { payload: FreqDataPoint }[];
 }
 
 function FreqTooltip({ active, payload }: FreqTooltipProps) {
@@ -110,7 +118,7 @@ function FreqTooltip({ active, payload }: FreqTooltipProps) {
 }
 
 export function MoodFreqChart({ moodCounts, chartType }: MoodFreqChartProps) {
-  const data = MOOD_OPTIONS
+  const data: FreqDataPoint[] = MOOD_OPTIONS
     .filter((o) => (moodCounts[o.value] ?? 0) > 0)
     .map((o) => ({
       mood: o.value,
@@ -141,7 +149,10 @@ export function MoodFreqChart({ moodCounts, chartType }: MoodFreqChartProps) {
               cx="50%"
               cy="50%"
               outerRadius={75}
-              label={({ emoji, count }) => `${emoji} ${count}`}
+              label={(props) => {
+                const d = props as unknown as FreqDataPoint & { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; x: number; y: number };
+                return `${d.emoji} ${d.count}`;
+              }}
               labelLine={false}
             >
               {data.map((entry, index) => (
@@ -165,18 +176,8 @@ export function MoodFreqChart({ moodCounts, chartType }: MoodFreqChartProps) {
     <div style={{ width: "100%", height: "180px" }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} barSize={28} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-          <XAxis
-            dataKey="emoji"
-            tick={{ fontSize: 18 }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            allowDecimals={false}
-            tick={{ fontSize: 11, fill: "var(--mc-text-muted)" }}
-            axisLine={false}
-            tickLine={false}
-          />
+          <XAxis dataKey="emoji" tick={{ fontSize: 18 }} axisLine={false} tickLine={false} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--mc-text-muted)" }} axisLine={false} tickLine={false} />
           <Tooltip content={<FreqTooltip />} cursor={{ fill: "var(--mc-surface)" }} />
           <Bar dataKey="count" radius={[6, 6, 0, 0]}>
             {data.map((entry, index) => (
