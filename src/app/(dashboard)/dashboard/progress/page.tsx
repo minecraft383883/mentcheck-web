@@ -46,6 +46,105 @@ function getReinforcementPhrase(
   return { emoji: "📓", text: `${daysWithEntry} días registrados este mes. Cada registro cuenta.`, color: "#2c5282", bg: "#ebf8ff" };
 }
 
+// ─── Calendario de emociones ─────────────────────────────────────────────────
+
+interface CalendarProps {
+  year: number;
+  month: number;
+  records: { date: string; mood: string | null }[];
+  isCurrentMonth: boolean;
+}
+
+function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps) {
+  const today = new Date();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Dom
+  // Convertir de Dom=0 a Lun=0
+  const offset = (firstDayOfWeek + 6) % 7;
+
+  const moodMap: Record<string, string | null> = {};
+  records.forEach((r) => {
+    const day = new Date(r.date + "T12:00:00").getDate();
+    moodMap[day] = r.mood;
+  });
+
+  const weekDays = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
+
+  return (
+    <div>
+      {/* Cabecera días de semana */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "0.375rem" }}>
+        {weekDays.map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Grid de días */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+        {/* Celdas vacías de offset */}
+        {Array.from({ length: offset }).map((_, i) => (
+          <div key={`empty-${i}`} />
+        ))}
+
+        {/* Días del mes */}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+          const mood = moodMap[day] ?? null;
+          const option = mood ? MOOD_OPTIONS.find((m) => m.value === mood) : null;
+          const isToday = isCurrentMonth &&
+            today.getDate() === day &&
+            today.getMonth() === month &&
+            today.getFullYear() === year;
+          const isFuture = isCurrentMonth && day > today.getDate();
+
+          return (
+            <div
+              key={day}
+              title={option ? `${option.label}` : isFuture ? "" : "Sin registro"}
+              style={{
+                aspectRatio: "1",
+                borderRadius: "0.5rem",
+                backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc",
+                border: isToday
+                  ? `2px solid var(--mc-primary)`
+                  : option
+                  ? `1px solid ${option.color}40`
+                  : isFuture
+                  ? "1px dashed #e2e8f0"
+                  : "1px solid #e2e8f0",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1px",
+                cursor: option ? "default" : "default",
+                position: "relative",
+              }}
+            >
+              <span style={{
+                fontSize: "0.5625rem",
+                fontWeight: isToday ? 700 : 400,
+                color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)",
+                lineHeight: 1,
+              }}>
+                {day}
+              </span>
+              {option ? (
+                <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span>
+              ) : !isFuture ? (
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ProgressPage() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getUTCMonth());
@@ -147,15 +246,12 @@ export default function ProgressPage() {
 
       {/* Tarjetas resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
-
-        {/* Días registrados */}
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
           <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Días registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{stats.daysWithEntry}</p>
           <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {stats.totalDays} días · {percentage}%</p>
         </div>
 
-        {/* Racha */}
         {isCurrentMonth && streak > 0 && (
           <div style={{ backgroundColor: streak >= 3 ? "#fffbeb" : "#f0fff4", border: `1px solid ${streak >= 3 ? "#f6ad55" : "#68d391"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
             <p style={{ fontSize: "0.75rem", color: streak >= 3 ? "#975a16" : "#276749", fontWeight: 500 }}>Racha actual</p>
@@ -168,16 +264,8 @@ export default function ProgressPage() {
           </div>
         )}
 
-        {/* Emoción predominante */}
-        <div style={{
-          backgroundColor: dominantOption ? dominantOption.bg : "#f7fafc",
-          border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`,
-          borderRadius: "0.75rem",
-          padding: "1.125rem",
-        }}>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>
-            Emoción predominante
-          </p>
+        <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#f7fafc", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
+          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emoción predominante</p>
           {dominantOption ? (
             <>
               <p style={{ fontSize: "1.375rem", fontWeight: 700, color: dominantOption.color, lineHeight: 1.2, marginTop: "0.375rem" }}>
@@ -189,9 +277,7 @@ export default function ProgressPage() {
             </>
           ) : (
             <>
-              <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-text-muted)", lineHeight: 1.3, marginTop: "0.375rem" }}>
-                Sin predominante
-              </p>
+              <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-text-muted)", lineHeight: 1.3, marginTop: "0.375rem" }}>Sin predominante</p>
               <p style={{ fontSize: "0.7rem", color: "var(--mc-text-muted)", marginTop: "0.25rem", opacity: 0.8, lineHeight: 1.4 }}>
                 {stats.daysWithEntry === 0 ? "Aún no hay registros" : "Las emociones están variadas"}
               </p>
@@ -202,8 +288,6 @@ export default function ProgressPage() {
 
       {/* Gráfica con toggle */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem 1.25rem 1rem", marginBottom: "1.75rem" }}>
-
-        {/* Header con toggles */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
             {chartMode === "dia" ? "Estado de ánimo por día" : "Frecuencia de emociones"}
@@ -214,7 +298,6 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        {/* Toggle barras / circular (solo en modo frecuencia) */}
         {chartMode === "frecuencia" && recordsWithMood.length > 0 && (
           <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.5rem", padding: "0.2rem", marginBottom: "0.875rem", width: "fit-content" }}>
             <button onClick={() => setFreqType("bar")} style={tabStyle(freqType === "bar")}>📊 Barras</button>
@@ -222,7 +305,6 @@ export default function ProgressPage() {
           </div>
         )}
 
-        {/* Gráfica */}
         {chartMode === "dia" ? (
           recordsWithMood.length === 0 ? (
             <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
@@ -235,7 +317,6 @@ export default function ProgressPage() {
           <MoodFreqChart moodCounts={moodCounts} chartType={freqType} />
         )}
 
-        {/* Leyenda */}
         {chartMode === "dia" && recordsWithMood.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.625rem", marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid var(--mc-border)" }}>
             {MOOD_OPTIONS.map((option) => (
@@ -246,6 +327,27 @@ export default function ProgressPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Calendario de emociones */}
+      <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.75rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Calendario del mes</h2>
+          <div style={{ display: "flex", gap: "0.875rem", flexWrap: "wrap" }}>
+            {MOOD_OPTIONS.filter((o) => (moodCounts[o.value] ?? 0) > 0).map((o) => (
+              <div key={o.value} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                <span style={{ fontSize: "0.75rem" }}>{o.emoji}</span>
+                <span style={{ fontSize: "0.625rem", color: "var(--mc-text-muted)" }}>{o.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <EmotionCalendar
+          year={selectedYear}
+          month={selectedMonth}
+          records={stats.records}
+          isCurrentMonth={isCurrentMonth}
+        />
       </div>
 
       {/* Lista de registros */}
