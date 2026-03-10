@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const month = qMonth ? parseInt(qMonth, 10) : now.getUTCMonth();
     const todayDay = (year === now.getUTCFullYear() && month === now.getUTCMonth())
       ? now.getUTCDate()
-      : 0; // 0 = no calcular racha en meses pasados
+      : 0;
 
     const firstDay = new Date(Date.UTC(year, month, 1));
     const lastDay = new Date(Date.UTC(year, month + 1, 0));
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Racha solo en el mes actual
+    // Racha solo en mes actual
     let streak = 0;
     if (todayDay > 0) {
       for (let d = todayDay; d >= 1; d--) {
@@ -70,8 +70,10 @@ export async function GET(req: NextRequest) {
       if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
     });
 
-    const dominantMood =
-      Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    // Solo hay emoción predominante si alguna emoción aparece MÁS DE 1 vez
+    const sorted = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
+    const dominantMood = sorted.length > 0 && sorted[0][1] > 1 ? sorted[0][0] : null;
+
     const daysWithEntry = records.filter((r) => r.mood !== null).length;
 
     return NextResponse.json({
@@ -79,6 +81,7 @@ export async function GET(req: NextRequest) {
       year,
       records,
       dominantMood,
+      moodCounts,
       daysWithEntry,
       totalDays: daysInMonth,
       streak,
