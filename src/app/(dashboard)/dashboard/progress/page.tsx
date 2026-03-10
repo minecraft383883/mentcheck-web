@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MoodChart from "@/components/stats/MoodChart";
+import { MoodDayChart, MoodFreqChart } from "@/components/stats/MoodChart";
 import MonthSelector from "@/components/ui/MonthSelector";
 import { MOOD_OPTIONS } from "@/types/diary";
 import { MonthlyStats } from "@/types/stats";
+
+type ChartMode = "dia" | "frecuencia";
+type FreqType = "bar" | "pie";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
@@ -49,6 +52,8 @@ export default function ProgressPage() {
   const [selectedYear, setSelectedYear] = useState(now.getUTCFullYear());
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chartMode, setChartMode] = useState<ChartMode>("frecuencia");
+  const [freqType, setFreqType] = useState<FreqType>("bar");
 
   useEffect(() => {
     fetchProgress(selectedMonth, selectedYear);
@@ -103,6 +108,20 @@ export default function ProgressPage() {
   const percentage = Math.round((stats.daysWithEntry / stats.totalDays) * 100);
   const streak = stats.streak ?? 0;
   const phrase = getReinforcementPhrase(streak, stats.daysWithEntry, percentage, stats.dominantMood, isCurrentMonth);
+  const moodCounts = stats.moodCounts ?? {};
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: "0.375rem 0.875rem",
+    borderRadius: "0.375rem",
+    fontSize: "0.8125rem",
+    fontWeight: active ? 500 : 400,
+    color: active ? "var(--mc-primary)" : "var(--mc-text-muted)",
+    backgroundColor: active ? "#fff" : "transparent",
+    border: active ? "1px solid var(--mc-border)" : "1px solid transparent",
+    cursor: "pointer",
+    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+    transition: "all 0.15s",
+  });
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "720px" }}>
@@ -149,7 +168,7 @@ export default function ProgressPage() {
           </div>
         )}
 
-        {/* Emoción predominante — solo si aparece más de 1 vez */}
+        {/* Emoción predominante */}
         <div style={{
           backgroundColor: dominantOption ? dominantOption.bg : "#f7fafc",
           border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`,
@@ -181,24 +200,52 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      {/* Gráfica */}
+      {/* Gráfica con toggle */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem 1.25rem 1rem", marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de ánimo por día</h2>
-        {recordsWithMood.length === 0 ? (
-          <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
-            No hay registros este mes.
+
+        {/* Header con toggles */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
+            {chartMode === "dia" ? "Estado de ánimo por día" : "Frecuencia de emociones"}
+          </h2>
+          <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.5rem", padding: "0.2rem" }}>
+            <button onClick={() => setChartMode("frecuencia")} style={tabStyle(chartMode === "frecuencia")}>Frecuencia</button>
+            <button onClick={() => setChartMode("dia")} style={tabStyle(chartMode === "dia")}>Por día</button>
           </div>
-        ) : (
-          <MoodChart records={stats.records} />
-        )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.625rem", marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid var(--mc-border)" }}>
-          {MOOD_OPTIONS.map((option) => (
-            <div key={option.value} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: option.color, flexShrink: 0 }} />
-              <span style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)" }}>{option.label}</span>
-            </div>
-          ))}
         </div>
+
+        {/* Toggle barras / circular (solo en modo frecuencia) */}
+        {chartMode === "frecuencia" && recordsWithMood.length > 0 && (
+          <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.5rem", padding: "0.2rem", marginBottom: "0.875rem", width: "fit-content" }}>
+            <button onClick={() => setFreqType("bar")} style={tabStyle(freqType === "bar")}>📊 Barras</button>
+            <button onClick={() => setFreqType("pie")} style={tabStyle(freqType === "pie")}>🥧 Circular</button>
+          </div>
+        )}
+
+        {/* Gráfica */}
+        {chartMode === "dia" ? (
+          recordsWithMood.length === 0 ? (
+            <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
+              No hay registros este mes.
+            </div>
+          ) : (
+            <MoodDayChart records={stats.records} />
+          )
+        ) : (
+          <MoodFreqChart moodCounts={moodCounts} chartType={freqType} />
+        )}
+
+        {/* Leyenda */}
+        {chartMode === "dia" && recordsWithMood.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.625rem", marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid var(--mc-border)" }}>
+            {MOOD_OPTIONS.map((option) => (
+              <div key={option.value} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: option.color, flexShrink: 0 }} />
+                <span style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)" }}>{option.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Lista de registros */}
