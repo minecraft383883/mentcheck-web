@@ -378,7 +378,11 @@ export default function PatientDetailPage() {
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
           <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>D\u00edas registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{daysWithEntry}</p>
+<<<<<<< Updated upstream
           <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} d\u00edas \u00b7 {percentage}%</p>
+=======
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} dias  {percentage}%</p>
+>>>>>>> Stashed changes
         </div>
         <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#fff", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
           <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emoci\u00f3n predominante</p>
