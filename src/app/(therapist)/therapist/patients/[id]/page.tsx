@@ -25,7 +25,7 @@ const MOOD_LABELS: Record<string, string> = {
   tristeza: "Tristeza",
   enojo: "Enojo",
   miedo: "Miedo",
-  tedio: "Tedio",
+  tedio: "Fastidio",
   ansiedad: "Ansiedad",
   no_lo_se: "No lo s\u00e9",
 };
@@ -170,6 +170,89 @@ async function downloadPDF(patient: PatientDetail) {
   doc.save(`mentcheck-${patient.name.replace(/\s+/g, "-").toLowerCase()}-${patient.month.toLowerCase()}-${patient.year}.pdf`);
 }
 
+// ─── Calendario de emociones (terapeuta) ─────────────────────────────────────
+
+interface CalendarProps {
+  year: number;
+  month: number;
+  records: { date: string; mood: string | null }[];
+  isCurrentMonth: boolean;
+}
+
+function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps) {
+  const today = new Date();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const offset = (firstDayOfWeek + 6) % 7;
+
+  const moodMap: Record<number, string | null> = {};
+  records.forEach((r) => {
+    const day = new Date(r.date + "T12:00:00").getDate();
+    moodMap[day] = r.mood;
+  });
+
+  const weekDays = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"];
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "0.375rem" }}>
+        {weekDays.map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>
+            {d}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+        {Array.from({ length: offset }).map((_, i) => <div key={`empty-${i}`} />)}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+          const mood = moodMap[day] ?? null;
+          const option = mood ? MOOD_OPTIONS.find((m) => m.value === mood) : null;
+          const isToday = isCurrentMonth &&
+            today.getDate() === day &&
+            today.getMonth() === month &&
+            today.getFullYear() === year;
+          const isFuture = isCurrentMonth && day > today.getDate();
+
+          return (
+            <div
+              key={day}
+              title={option ? option.label : isFuture ? "" : "Sin registro"}
+              style={{
+                aspectRatio: "1",
+                borderRadius: "0.5rem",
+                backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc",
+                border: isToday
+                  ? "2px solid var(--mc-primary)"
+                  : option
+                  ? `1px solid ${option.color}40`
+                  : isFuture
+                  ? "1px dashed #e2e8f0"
+                  : "1px solid #e2e8f0",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1px",
+              }}
+            >
+              <span style={{ fontSize: "0.5625rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)", lineHeight: 1 }}>
+                {day}
+              </span>
+              {option ? (
+                <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span>
+              ) : !isFuture ? (
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+
 export default function PatientDetailPage() {
   const params = useParams();
   const now = new Date();
@@ -202,6 +285,9 @@ export default function PatientDetailPage() {
     finally { setGenerating(false); }
   }
 
+  const isCurrentMonth =
+    selectedMonth === now.getUTCMonth() && selectedYear === now.getUTCFullYear();
+
   if (loading) {
     return (
       <div style={{ padding: "2rem 1.5rem" }}>
@@ -225,6 +311,7 @@ export default function PatientDetailPage() {
   recordsWithMood.forEach((r) => { if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1; });
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const dominantOption = dominantMood ? MOOD_OPTIONS.find((m) => m.value === dominantMood) : null;
+  const visibleMoods = MOOD_OPTIONS.filter((o) => (moodCounts[o.value] ?? 0) > 0);
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "720px" }}>
@@ -289,28 +376,49 @@ export default function PatientDetailPage() {
       {/* Tarjetas resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Dias registrados</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>D\u00edas registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{daysWithEntry}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} dias \u00b7 {percentage}%</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} d\u00edas \u00b7 {percentage}%</p>
         </div>
         <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#fff", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emocion predominante</p>
+          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emoci\u00f3n predominante</p>
           <p style={{ fontSize: "1.25rem", fontWeight: 700, color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", lineHeight: 1.2, marginTop: "0.375rem" }}>
             {dominantOption ? `${dominantOption.emoji} ${dominantOption.label}` : "Sin datos"}
           </p>
         </div>
       </div>
 
-      {/* Grafica */}
+      {/* Gr\u00e1fica */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.75rem" }}>
         <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>
-          Estado de animo \u2014 {patient.month} {patient.year}
+          Estado de \u00e1nimo \u2014 {patient.month} {patient.year}
         </h2>
         {recordsWithMood.length === 0 ? (
           <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Sin registros este mes.</div>
         ) : (
           <MoodChart records={toMoodRecords(patient.records)} />
         )}
+      </div>
+
+      {/* Calendario de emociones */}
+      <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.75rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Calendario del mes</h2>
+          <div style={{ display: "flex", gap: "0.875rem", flexWrap: "wrap" }}>
+            {visibleMoods.map((o) => (
+              <div key={o.value} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                <span style={{ fontSize: "0.75rem" }}>{o.emoji}</span>
+                <span style={{ fontSize: "0.625rem", color: "var(--mc-text-muted)" }}>{o.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <EmotionCalendar
+          year={selectedYear}
+          month={selectedMonth}
+          records={patient.records}
+          isCurrentMonth={isCurrentMonth}
+        />
       </div>
 
       {/* Registro detallado */}
