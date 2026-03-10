@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// DELETE /api/therapist/patients/[id]/reminders/[reminderId]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; reminderId: string } }
+  { params }: { params: Promise<{ id: string; reminderId: string }> }
 ) {
   try {
+    const { id, reminderId } = await params;
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
@@ -15,11 +15,11 @@ export async function DELETE(
     if (!therapist) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
 
     const link = await prisma.therapistPatient.findFirst({
-      where: { therapistProfileId: therapist.id, patientProfileId: params.id },
+      where: { therapistProfileId: therapist.id, patientProfileId: id },
     });
     if (!link) return NextResponse.json({ error: "Paciente no encontrado." }, { status: 404 });
 
-    await prisma.reminder.delete({ where: { id: params.reminderId } });
+    await prisma.reminder.delete({ where: { id: reminderId } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

@@ -2,23 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET  /api/therapist/patients/[id]/reminders
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
     const therapist = await prisma.therapistProfile.findUnique({ where: { userId: session.user.id } });
     if (!therapist) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
 
-    // Verificar que el paciente pertenece a este terapeuta
     const link = await prisma.therapistPatient.findFirst({
-      where: { therapistProfileId: therapist.id, patientProfileId: params.id },
+      where: { therapistProfileId: therapist.id, patientProfileId: id },
     });
     if (!link) return NextResponse.json({ error: "Paciente no encontrado." }, { status: 404 });
 
     const reminders = await prisma.reminder.findMany({
-      where: { patientProfileId: params.id },
+      where: { patientProfileId: id },
       orderBy: { createdAt: "desc" },
     });
 
@@ -29,9 +28,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-// POST /api/therapist/patients/[id]/reminders
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!therapist) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
 
     const link = await prisma.therapistPatient.findFirst({
-      where: { therapistProfileId: therapist.id, patientProfileId: params.id },
+      where: { therapistProfileId: therapist.id, patientProfileId: id },
     });
     if (!link) return NextResponse.json({ error: "Paciente no encontrado." }, { status: 404 });
 
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const reminder = await prisma.reminder.create({
       data: {
-        patientProfileId: params.id,
+        patientProfileId: id,
         type,
         title: title?.trim() || type,
         time,
