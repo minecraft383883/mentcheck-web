@@ -14,12 +14,24 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -43,6 +55,9 @@ export default function RegisterPage() {
       setLoading(false);
     }
   }
+
+  const passwordMismatch =
+    confirmPassword.length > 0 && password !== confirmPassword;
 
   return (
     <div
@@ -137,6 +152,26 @@ export default function RegisterPage() {
             placeholder="Mínimo 8 caracteres"
             required
           />
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+            <Input
+              label="Confirmar contraseña"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repite tu contraseña"
+              required
+            />
+            {passwordMismatch && (
+              <p style={{ fontSize: "0.75rem", color: "#c53030", marginTop: "0.125rem" }}>
+                Las contraseñas no coinciden.
+              </p>
+            )}
+            {!passwordMismatch && confirmPassword.length > 0 && password === confirmPassword && (
+              <p style={{ fontSize: "0.75rem", color: "#276749", marginTop: "0.125rem" }}>
+                ✓ Las contraseñas coinciden.
+              </p>
+            )}
+          </div>
 
           {error && (
             <div
@@ -153,7 +188,13 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <Button type="submit" variant="primary" fullWidth loading={loading}>
+          <Button
+            type="submit"
+            variant="primary"
+            fullWidth
+            loading={loading}
+            disabled={passwordMismatch || loading}
+          >
             Crear cuenta
           </Button>
         </form>
