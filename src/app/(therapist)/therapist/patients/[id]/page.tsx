@@ -34,6 +34,16 @@ interface SessionNote {
   createdAt: string;
 }
 
+interface Reminder {
+  id: string;
+  type: "medicacion" | "actividad" | "cita" | "personalizado";
+  title: string;
+  time: string;
+  repeat: boolean;
+  status: "pendiente" | "completado";
+  createdAt: string;
+}
+
 const MOOD_LABELS: Record<string, string> = {
   alegria: "Alegría",
   tristeza: "Tristeza",
@@ -42,6 +52,20 @@ const MOOD_LABELS: Record<string, string> = {
   tedio: "Fastidio",
   ansiedad: "Ansiedad",
   no_lo_se: "No lo sé",
+};
+
+const REMINDER_TYPE_LABEL: Record<string, string> = {
+  medicacion: "Medicación",
+  actividad: "Actividad",
+  cita: "Cita",
+  personalizado: "Personalizado",
+};
+
+const REMINDER_TYPE_EMOJI: Record<string, string> = {
+  medicacion: "💊",
+  actividad: "🏃",
+  cita: "📅",
+  personalizado: "✅",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -184,9 +208,7 @@ function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "0.375rem" }}>
         {weekDays.map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>
-            {d}
-          </div>
+          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>{d}</div>
         ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
@@ -197,35 +219,11 @@ function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps
           const isToday = isCurrentMonth && today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
           const isFuture = isCurrentMonth && day > today.getDate();
           return (
-            <div
-              key={day}
-              title={option ? option.label : isFuture ? "" : "Sin registro"}
-              style={{
-                aspectRatio: "1",
-                borderRadius: "0.5rem",
-                backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc",
-                border: isToday
-                  ? "2px solid var(--mc-primary)"
-                  : option
-                  ? `1px solid ${option.color}40`
-                  : isFuture
-                  ? "1px dashed #e2e8f0"
-                  : "1px solid #e2e8f0",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "1px",
-              }}
+            <div key={day} title={option ? option.label : isFuture ? "" : "Sin registro"}
+              style={{ aspectRatio: "1", borderRadius: "0.5rem", backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc", border: isToday ? "2px solid var(--mc-primary)" : option ? `1px solid ${option.color}40` : isFuture ? "1px dashed #e2e8f0" : "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1px" }}
             >
-              <span style={{ fontSize: "0.5625rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)", lineHeight: 1 }}>
-                {day}
-              </span>
-              {option ? (
-                <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span>
-              ) : !isFuture ? (
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} />
-              ) : null}
+              <span style={{ fontSize: "0.5625rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)", lineHeight: 1 }}>{day}</span>
+              {option ? <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span> : !isFuture ? <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} /> : null}
             </div>
           );
         })}
@@ -297,15 +295,11 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
-        >
+        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nueva cita
         </button>
       </div>
-
       {showForm && (
         <form onSubmit={handleCreate} style={{ backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
@@ -324,13 +318,10 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
           </div>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", backgroundColor: "#fff", color: "var(--mc-text-muted)", fontSize: "0.8125rem", cursor: "pointer" }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Guardando..." : "Guardar cita"}
-            </button>
+            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Guardando..." : "Guardar cita"}</button>
           </div>
         </form>
       )}
-
       {loading ? (
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</p>
       ) : appointments.length === 0 ? (
@@ -347,20 +338,13 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   );
 }
 
-function AppointmentCard({ appt, onStatus, onDelete, updating }: {
-  appt: Appointment;
-  onStatus: (id: string, s: string) => void;
-  onDelete: (id: string) => void;
-  updating: boolean;
-}) {
+function AppointmentCard({ appt, onStatus, onDelete, updating }: { appt: Appointment; onStatus: (id: string, s: string) => void; onDelete: (id: string) => void; updating: boolean; }) {
   return (
     <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "0.875rem 1rem", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
           <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)" }}>{formatDateTime(appt.dateTime)}</span>
-          <span style={{ fontSize: "0.6875rem", fontWeight: 500, padding: "0.125rem 0.5rem", borderRadius: "9999px", backgroundColor: STATUS_BG[appt.status], color: STATUS_COLOR[appt.status] }}>
-            {STATUS_LABEL[appt.status]}
-          </span>
+          <span style={{ fontSize: "0.6875rem", fontWeight: 500, padding: "0.125rem 0.5rem", borderRadius: "9999px", backgroundColor: STATUS_BG[appt.status], color: STATUS_COLOR[appt.status] }}>{STATUS_LABEL[appt.status]}</span>
         </div>
         {appt.notes && <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>{appt.notes}</p>}
       </div>
@@ -420,15 +404,11 @@ function NotesTab({ patientId }: NotesTabProps) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
-        >
+        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nueva nota
         </button>
       </div>
-
       {showForm && (
         <form onSubmit={handleCreate} style={{ backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
@@ -441,13 +421,10 @@ function NotesTab({ patientId }: NotesTabProps) {
           </div>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", backgroundColor: "#fff", color: "var(--mc-text-muted)", fontSize: "0.8125rem", cursor: "pointer" }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Guardando..." : "Guardar nota"}
-            </button>
+            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Guardando..." : "Guardar nota"}</button>
           </div>
         </form>
       )}
-
       {loading ? (
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</p>
       ) : notes.length === 0 ? (
@@ -456,14 +433,142 @@ function NotesTab({ patientId }: NotesTabProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {notes.map((note) => (
             <div key={note.id} style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1rem" }}>
-              <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-primary)", marginBottom: "0.5rem" }}>
-                {formatDate(note.date.split("T")[0])}
-              </p>
+              <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-primary)", marginBottom: "0.5rem" }}>{formatDate(note.date.split("T")[0])}</p>
               <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{note.content}</p>
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Expediente: Recordatorios ───────────────────────────────────────────────
+interface RemindersTabProps { patientId: string; }
+function RemindersTab({ patientId }: RemindersTabProps) {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<"medicacion" | "actividad" | "cita" | "personalizado">("personalizado");
+  const [formTitle, setFormTitle] = useState("");
+  const [formTime, setFormTime] = useState("08:00");
+  const [formRepeat, setFormRepeat] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch(`/api/therapist/patients/${patientId}/reminders`)
+      .then((r) => r.json())
+      .then((d) => setReminders(Array.isArray(d) ? d : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await fetch(`/api/therapist/patients/${patientId}/reminders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: formType, title: formTitle || REMINDER_TYPE_LABEL[formType], time: formTime, repeat: formRepeat }),
+      });
+      setShowForm(false);
+      setFormTitle("");
+      setFormTime("08:00");
+      setFormRepeat(false);
+      setFormType("personalizado");
+      load();
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(reminderId: string) {
+    if (!confirm("¿Eliminar este recordatorio?")) return;
+    await fetch(`/api/therapist/patients/${patientId}/reminders/${reminderId}`, { method: "DELETE" });
+    load();
+  }
+
+  const pending = reminders.filter((r) => r.status === "pendiente");
+  const done = reminders.filter((r) => r.status === "completado");
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          Nuevo recordatorio
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} style={{ backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Tipo</label>
+              <select value={formType} onChange={(e) => setFormType(e.target.value as typeof formType)} style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }}>
+                <option value="personalizado">✅ Personalizado</option>
+                <option value="medicacion">💊 Medicación</option>
+                <option value="actividad">🏃 Actividad</option>
+                <option value="cita">📅 Cita</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Hora</label>
+              <input type="time" value={formTime} onChange={(e) => setFormTime(e.target.value)} required style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Título (opcional)</label>
+            <input type="text" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder={REMINDER_TYPE_LABEL[formType]} style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }} />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "var(--mc-text)", cursor: "pointer" }}>
+            <input type="checkbox" checked={formRepeat} onChange={(e) => setFormRepeat(e.target.checked)} style={{ width: "14px", height: "14px" }} />
+            Repetir diariamente
+          </label>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", backgroundColor: "#fff", color: "var(--mc-text-muted)", fontSize: "0.8125rem", cursor: "pointer" }}>Cancelar</button>
+            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Guardando..." : "Enviar recordatorio"}</button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</p>
+      ) : reminders.length === 0 ? (
+        <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", textAlign: "center", padding: "2rem 0" }}>Sin recordatorios enviados.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          {pending.length > 0 && <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Pendientes</p>}
+          {pending.map((r) => <ReminderCard key={r.id} reminder={r} onDelete={handleDelete} />)}
+          {done.length > 0 && <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.5rem" }}>Completados</p>}
+          {done.map((r) => <ReminderCard key={r.id} reminder={r} onDelete={handleDelete} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReminderCard({ reminder, onDelete }: { reminder: Reminder; onDelete: (id: string) => void }) {
+  const isDone = reminder.status === "completado";
+  return (
+    <div style={{ backgroundColor: isDone ? "var(--mc-surface)" : "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", opacity: isDone ? 0.7 : 1 }}>
+      <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>{REMINDER_TYPE_EMOJI[reminder.type] ?? "✅"}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)", textDecoration: isDone ? "line-through" : "none" }}>{reminder.title}</p>
+        <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>
+          {REMINDER_TYPE_LABEL[reminder.type]} · {reminder.time}{reminder.repeat ? " · Diario" : ""}
+        </p>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+        <span style={{ fontSize: "0.6875rem", fontWeight: 500, padding: "0.125rem 0.5rem", borderRadius: "9999px", backgroundColor: isDone ? "#dcfce7" : "#fef3c7", color: isDone ? "#16a34a" : "#d97706" }}>
+          {isDone ? "Completado" : "Pendiente"}
+        </span>
+        <button onClick={() => onDelete(reminder.id)} title="Eliminar" style={{ padding: "0.3125rem 0.5rem", borderRadius: "0.375rem", border: "1px solid var(--mc-border)", backgroundColor: "var(--mc-surface)", color: "var(--mc-text-muted)", fontSize: "0.75rem", cursor: "pointer" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /></svg>
+        </button>
+      </div>
     </div>
   );
 }
@@ -477,7 +582,7 @@ export default function PatientDetailPage() {
   const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [expedienteTab, setExpedienteTab] = useState<"citas" | "notas">("citas");
+  const [expedienteTab, setExpedienteTab] = useState<"citas" | "notas" | "recordatorios">("citas");
 
   useEffect(() => {
     if (!params.id) return;
@@ -547,11 +652,7 @@ export default function PatientDetailPage() {
               <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)" }}>{patient.email}</p>
             </div>
           </div>
-          <button
-            onClick={handleDownloadPDF}
-            disabled={generating}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: generating ? "var(--mc-surface)" : "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
-          >
+          <button onClick={handleDownloadPDF} disabled={generating} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: generating ? "var(--mc-surface)" : "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             {generating ? "Generando..." : "Descargar PDF"}
           </button>
@@ -601,9 +702,7 @@ export default function PatientDetailPage() {
 
       {/* Gráfica */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>
-          Estado de ánimo — {patient.month} {patient.year}
-        </h2>
+        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de ánimo — {patient.month} {patient.year}</h2>
         {recordsWithMood.length === 0 ? (
           <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Sin registros este mes.</div>
         ) : (
@@ -629,25 +728,22 @@ export default function PatientDetailPage() {
 
       {/* Expediente */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", overflow: "hidden", marginBottom: "1.75rem" }}>
-        <div style={{ padding: "1.125rem 1.25rem", borderBottom: "1px solid var(--mc-border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+        <div style={{ padding: "1.125rem 1.25rem", borderBottom: "1px solid var(--mc-border)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
           <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Expediente</h2>
           <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", borderRadius: "0.5rem", padding: "0.25rem" }}>
-            {(["citas", "notas"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setExpedienteTab(tab)}
+            {(["citas", "notas", "recordatorios"] as const).map((tab) => (
+              <button key={tab} onClick={() => setExpedienteTab(tab)}
                 style={{ padding: "0.3125rem 0.875rem", borderRadius: "0.375rem", border: "none", backgroundColor: expedienteTab === tab ? "#fff" : "transparent", color: expedienteTab === tab ? "var(--mc-primary)" : "var(--mc-text-muted)", fontSize: "0.8125rem", fontWeight: expedienteTab === tab ? 600 : 400, cursor: "pointer", boxShadow: expedienteTab === tab ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}
               >
-                {tab === "citas" ? "📅 Citas" : "📝 Notas"}
+                {tab === "citas" ? "📅 Citas" : tab === "notas" ? "📝 Notas" : "🔔 Recordatorios"}
               </button>
             ))}
           </div>
         </div>
         <div style={{ padding: "1.25rem" }}>
-          {expedienteTab === "citas"
-            ? <AppointmentsTab patientId={patient.id} />
-            : <NotesTab patientId={patient.id} />
-          }
+          {expedienteTab === "citas" && <AppointmentsTab patientId={patient.id} />}
+          {expedienteTab === "notas" && <NotesTab patientId={patient.id} />}
+          {expedienteTab === "recordatorios" && <RemindersTab patientId={patient.id} />}
         </div>
       </div>
 
