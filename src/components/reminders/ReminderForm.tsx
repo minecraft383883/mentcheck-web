@@ -10,74 +10,64 @@ interface ReminderFormProps {
   onCancel: () => void;
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+
+const selectStyle: React.CSSProperties = {
+  flex: 1,
+  padding: "0.625rem 0.75rem",
+  borderRadius: "0.5rem",
+  border: "1px solid var(--mc-border)",
+  fontSize: "1rem",
+  fontWeight: 500,
+  color: "var(--mc-text)",
+  backgroundColor: "#fff",
+  outline: "none",
+  cursor: "pointer",
+  appearance: "none",
+  textAlign: "center",
+};
+
 export default function ReminderForm({ onSave, onCancel }: ReminderFormProps) {
   const [type, setType] = useState<ReminderType>("medicacion");
   const [title, setTitle] = useState("");
-  const [time, setTime] = useState("");
+  const [hour, setHour] = useState("08");
+  const [minute, setMinute] = useState("00");
   const [repeat, setRepeat] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  setLoading(true);
-
-  try {
-    const res = await fetch("/api/reminders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, title, time, repeat }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("Error al guardar:", data.error);
-      return;
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const time = `${hour}:${minute}`;
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, title, time, repeat }),
+      });
+      const data = await res.json();
+      if (!res.ok) { console.error("Error al guardar:", data.error); return; }
+      onSave(data.reminder);
+    } catch (error) {
+      console.error("Error de red:", error);
+    } finally {
+      setLoading(false);
     }
-
-    onSave(data.reminder);
-  } catch (error) {
-    console.error("Error de red:", error);
-  } finally {
-    setLoading(false);
   }
-}
-
 
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        backgroundColor: "#fff",
-        border: "1px solid var(--mc-border)",
-        borderRadius: "0.875rem",
-        padding: "1.5rem",
-        marginBottom: "1.5rem",
-      }}
+      style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem", marginBottom: "1.5rem" }}
     >
-      <h2
-        style={{
-          fontSize: "0.9375rem",
-          fontWeight: 600,
-          color: "var(--mc-text)",
-          marginBottom: "1.25rem",
-        }}
-      >
+      <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1.25rem" }}>
         Nuevo recordatorio
       </h2>
 
       {/* Tipo */}
       <div style={{ marginBottom: "1.25rem" }}>
-        <p
-          style={{
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            color: "var(--mc-text-secondary)",
-            marginBottom: "0.625rem",
-          }}
-        >
-          Tipo
-        </p>
+        <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--mc-text-secondary)", marginBottom: "0.625rem" }}>Tipo</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
           {REMINDER_TYPES.map((option) => {
             const active = type === option.value;
@@ -106,7 +96,7 @@ export default function ReminderForm({ onSave, onCancel }: ReminderFormProps) {
         </div>
       </div>
 
-      {/* Titulo personalizado */}
+      {/* Descripción */}
       <div style={{ marginBottom: "1.25rem" }}>
         <Input
           label="Descripción"
@@ -117,15 +107,24 @@ export default function ReminderForm({ onSave, onCancel }: ReminderFormProps) {
         />
       </div>
 
-      {/* Hora */}
+      {/* Time picker custom */}
       <div style={{ marginBottom: "1.25rem" }}>
-        <Input
-          label="Hora"
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          required
-        />
+        <p style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)", marginBottom: "0.5rem" }}>Hora</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.625rem", padding: "0.375rem 0.5rem" }}>
+          <select value={hour} onChange={(e) => setHour(e.target.value)} style={selectStyle}>
+            {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <span style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--mc-text-muted)", flexShrink: 0 }}>:</span>
+          <select value={minute} onChange={(e) => setMinute(e.target.value)} style={selectStyle}>
+            {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <span style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", flexShrink: 0, paddingLeft: "0.25rem" }}>
+            {parseInt(hour) < 12 ? "AM" : "PM"}
+          </span>
+        </div>
+        <p style={{ fontSize: "0.7rem", color: "var(--mc-text-muted)", marginTop: "0.375rem" }}>
+          {parseInt(hour) === 0 ? "12" : parseInt(hour) > 12 ? String(parseInt(hour) - 12).padStart(2, "0") : hour}:{minute} {parseInt(hour) < 12 ? "AM" : "PM"}
+        </p>
       </div>
 
       {/* Repetir */}
@@ -133,45 +132,17 @@ export default function ReminderForm({ onSave, onCancel }: ReminderFormProps) {
         <button
           type="button"
           onClick={() => setRepeat(!repeat)}
-          style={{
-            width: "40px",
-            height: "22px",
-            borderRadius: "999px",
-            backgroundColor: repeat ? "var(--mc-teal)" : "var(--mc-border)",
-            border: "none",
-            cursor: "pointer",
-            position: "relative",
-            transition: "background-color 0.2s",
-            flexShrink: 0,
-          }}
+          style={{ width: "40px", height: "22px", borderRadius: "999px", backgroundColor: repeat ? "var(--mc-teal)" : "var(--mc-border)", border: "none", cursor: "pointer", position: "relative", transition: "background-color 0.2s", flexShrink: 0 }}
         >
-          <span
-            style={{
-              position: "absolute",
-              top: "3px",
-              left: repeat ? "21px" : "3px",
-              width: "16px",
-              height: "16px",
-              borderRadius: "50%",
-              backgroundColor: "#fff",
-              transition: "left 0.2s",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-            }}
-          />
+          <span style={{ position: "absolute", top: "3px", left: repeat ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", backgroundColor: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
         </button>
-        <span style={{ fontSize: "0.875rem", color: "var(--mc-text-secondary)" }}>
-          Repetir diariamente
-        </span>
+        <span style={{ fontSize: "0.875rem", color: "var(--mc-text-secondary)" }}>Repetir diariamente</span>
       </div>
 
       {/* Acciones */}
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" variant="primary" loading={loading}>
-          Guardar
-        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" variant="primary" loading={loading}>Guardar</Button>
       </div>
     </form>
   );

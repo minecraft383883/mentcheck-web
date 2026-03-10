@@ -19,7 +19,7 @@ const navItems = [
   },
   {
     href: "/therapist/invite",
-    label: "Codigos de invitacion",
+    label: "Códigos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -28,6 +28,14 @@ const navItems = [
     ),
   },
 ];
+
+const logoutIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 
 export default function TherapistSidebar() {
   const pathname = usePathname();
@@ -38,26 +46,12 @@ export default function TherapistSidebar() {
       {/* Sidebar desktop */}
       <aside
         className="sidebar-desktop"
-        style={{
-          width: "220px",
-          minHeight: "100vh",
-          backgroundColor: "#fff",
-          borderRight: "1px solid var(--mc-border)",
-          flexDirection: "column",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          zIndex: 40,
-        }}
+        style={{ width: "220px", minHeight: "100vh", backgroundColor: "#fff", borderRight: "1px solid var(--mc-border)", flexDirection: "column", position: "fixed", top: 0, left: 0, zIndex: 40 }}
       >
         {/* Logo */}
         <div style={{ padding: "1.5rem 1.25rem 1.25rem", borderBottom: "1px solid var(--mc-border)" }}>
-          <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-primary)", letterSpacing: "-0.01em" }}>
-            Mentcheck
-          </p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>
-            Panel del psicólogo
-          </p>
+          <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-primary)", letterSpacing: "-0.01em" }}>Mentcheck</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>Panel del psicólogo</p>
         </div>
 
         {/* Nav */}
@@ -68,25 +62,9 @@ export default function TherapistSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.625rem",
-                  padding: "0.5rem 0.75rem",
-                  borderRadius: "0.5rem",
-                  fontSize: "0.875rem",
-                  fontWeight: active ? 500 : 400,
-                  color: active ? "var(--mc-primary)" : "var(--mc-text-secondary)",
-                  backgroundColor: active ? "var(--mc-sky)" : "transparent",
-                  textDecoration: "none",
-                  transition: "background-color 0.15s, color 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--mc-surface)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent";
-                }}
+                style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0.75rem", borderRadius: "0.5rem", fontSize: "0.875rem", fontWeight: active ? 500 : 400, color: active ? "var(--mc-primary)" : "var(--mc-text-secondary)", backgroundColor: active ? "var(--mc-sky)" : "transparent", textDecoration: "none", transition: "background-color 0.15s, color 0.15s" }}
+                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--mc-surface)"; }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent"; }}
               >
                 {item.icon}
                 {item.label}
@@ -95,7 +73,7 @@ export default function TherapistSidebar() {
           })}
         </nav>
 
-        {/* Usuario y cerrar sesion */}
+        {/* Usuario + logout desktop */}
         <div style={{ borderTop: "1px solid var(--mc-border)" }}>
           <div style={{ padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.625rem", borderBottom: "1px solid var(--mc-border)" }}>
             <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "var(--mc-sky)", border: "1.5px solid var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, color: "var(--mc-primary)", flexShrink: 0 }}>
@@ -117,21 +95,17 @@ export default function TherapistSidebar() {
               onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--mc-surface)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text)"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--mc-text-muted)"; }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              Cerrar sesion
+              {logoutIcon}
+              Cerrar sesión
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Nav inferior mobile */}
+      {/* Nav inferior mobile — incluye logout */}
       <nav
         className="sidebar-mobile"
-        style={{ position: "fixed", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", borderTop: "1px solid var(--mc-border)", zIndex: 40, paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{ position: "fixed", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", borderTop: "1px solid var(--mc-border)", zIndex: 40, paddingBottom: "env(safe-area-inset-bottom)", display: "flex" }}
       >
         {navItems.map((item) => {
           const active = pathname === item.href;
@@ -146,6 +120,15 @@ export default function TherapistSidebar() {
             </Link>
           );
         })}
+
+        {/* Logout mobile */}
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0.625rem 0.25rem", gap: "0.25rem", color: "#c53030", backgroundColor: "transparent", border: "none", fontSize: "0.6875rem", fontWeight: 400, cursor: "pointer" }}
+        >
+          {logoutIcon}
+          Salir
+        </button>
       </nav>
     </>
   );
