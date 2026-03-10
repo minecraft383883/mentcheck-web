@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MoodChart from "@/components/stats/MoodChart";
+import { MoodDayChart, MoodFreqChart } from "@/components/stats/MoodChart";
 import MonthSelector from "@/components/ui/MonthSelector";
 import { MOOD_OPTIONS } from "@/types/diary";
 import { MonthlyStats } from "@/types/stats";
+
+type ChartMode = "dia" | "frecuencia";
+type FreqType = "bar" | "pie";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
@@ -23,24 +26,24 @@ function getReinforcementPhrase(
 ): { emoji: string; text: string; color: string; bg: string } {
   if (!isCurrentMonth) {
     if (daysWithEntry === 0)
-      return { emoji: "\uD83D\uDCC5", text: "No hubo registros ese mes.", color: "#718096", bg: "#f7fafc" };
+      return { emoji: "📅", text: "No hubo registros ese mes.", color: "#718096", bg: "#f7fafc" };
     if (percentage >= 70)
-      return { emoji: "\uD83D\uDCAA", text: `Registraste el ${percentage}% de ese mes. \u00a1Muy constante!`, color: "#276749", bg: "#f0fff4" };
-    return { emoji: "\uD83D\uDCC3", text: `${daysWithEntry} d\u00edas registrados ese mes.`, color: "#2c5282", bg: "#ebf8ff" };
+      return { emoji: "💪", text: `Registraste el ${percentage}% de ese mes. ¡Muy constante!`, color: "#276749", bg: "#f0fff4" };
+    return { emoji: "📃", text: `${daysWithEntry} días registrados ese mes.`, color: "#2c5282", bg: "#ebf8ff" };
   }
   if (streak >= 7)
-    return { emoji: "\uD83D\uDD25", text: `\u00a1${streak} d\u00edas seguidos registrando! Eso es dedicaci\u00f3n real.`, color: "#c05621", bg: "#fffaf0" };
+    return { emoji: "🔥", text: `¡${streak} días seguidos registrando! Eso es dedicación real.`, color: "#c05621", bg: "#fffaf0" };
   if (streak >= 3)
-    return { emoji: "\u2B50", text: `\u00a1Llevas ${streak} d\u00edas consecutivos! Sigue as\u00ed.`, color: "#975a16", bg: "#fefcbf" };
+    return { emoji: "⭐", text: `¡Llevas ${streak} días consecutivos! Sigue así.`, color: "#975a16", bg: "#fefcbf" };
   if (streak === 1)
-    return { emoji: "\u2705", text: "Hoy ya registraste tu d\u00eda. \u00a1Bien hecho!", color: "#276749", bg: "#f0fff4" };
+    return { emoji: "✅", text: "Hoy ya registraste tu día. ¡Bien hecho!", color: "#276749", bg: "#f0fff4" };
   if (daysWithEntry === 0)
-    return { emoji: "\uD83D\uDC4B", text: "A\u00fan no hay registros este mes. \u00a1Hoy es un buen d\u00eda para empezar!", color: "#2b6cb0", bg: "#ebf8ff" };
+    return { emoji: "👋", text: "Aún no hay registros este mes. ¡Hoy es un buen día para empezar!", color: "#2b6cb0", bg: "#ebf8ff" };
   if (percentage >= 70)
-    return { emoji: "\uD83D\uDCAA", text: `Has registrado el ${percentage}% del mes. \u00a1Un mes muy constante!`, color: "#276749", bg: "#f0fff4" };
+    return { emoji: "💪", text: `Has registrado el ${percentage}% del mes. ¡Un mes muy constante!`, color: "#276749", bg: "#f0fff4" };
   if (dominantMood === "alegria")
-    return { emoji: "\uD83D\uDE0A", text: "La alegr\u00eda ha dominado tu mes. \u00a1Qu\u00e9 buena noticia!", color: "#975a16", bg: "#fefcbf" };
-  return { emoji: "\uD83D\uDCD3", text: `${daysWithEntry} d\u00edas registrados este mes. Cada registro cuenta.`, color: "#2c5282", bg: "#ebf8ff" };
+    return { emoji: "😊", text: "La alegría ha dominado tu mes. ¡Qué buena noticia!", color: "#975a16", bg: "#fefcbf" };
+  return { emoji: "📓", text: `${daysWithEntry} días registrados este mes. Cada registro cuenta.`, color: "#2c5282", bg: "#ebf8ff" };
 }
 
 export default function ProgressPage() {
@@ -49,6 +52,8 @@ export default function ProgressPage() {
   const [selectedYear, setSelectedYear] = useState(now.getUTCFullYear());
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chartMode, setChartMode] = useState<ChartMode>("frecuencia");
+  const [freqType, setFreqType] = useState<FreqType>("bar");
 
   useEffect(() => {
     fetchProgress(selectedMonth, selectedYear);
@@ -96,11 +101,27 @@ export default function ProgressPage() {
     );
   }
 
-  const dominantOption = stats.dominantMood ? MOOD_OPTIONS.find((m) => m.value === stats.dominantMood) : null;
+  const dominantOption = stats.dominantMood
+    ? MOOD_OPTIONS.find((m) => m.value === stats.dominantMood)
+    : null;
   const recordsWithMood = stats.records.filter((r) => r.mood !== null);
   const percentage = Math.round((stats.daysWithEntry / stats.totalDays) * 100);
   const streak = stats.streak ?? 0;
   const phrase = getReinforcementPhrase(streak, stats.daysWithEntry, percentage, stats.dominantMood, isCurrentMonth);
+  const moodCounts = stats.moodCounts ?? {};
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: "0.375rem 0.875rem",
+    borderRadius: "0.375rem",
+    fontSize: "0.8125rem",
+    fontWeight: active ? 500 : 400,
+    color: active ? "var(--mc-primary)" : "var(--mc-text-muted)",
+    backgroundColor: active ? "#fff" : "transparent",
+    border: active ? "1px solid var(--mc-border)" : "1px solid transparent",
+    cursor: "pointer",
+    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+    transition: "all 0.15s",
+  });
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "720px" }}>
@@ -118,7 +139,7 @@ export default function ProgressPage() {
           <p style={{ fontSize: "0.875rem", color: phrase.color, fontWeight: 500, lineHeight: 1.4 }}>{phrase.text}</p>
           {isCurrentMonth && streak >= 2 && (
             <p style={{ fontSize: "0.75rem", color: phrase.color, opacity: 0.75, marginTop: "0.2rem" }}>
-              Racha actual: {streak} {streak === 1 ? "d\u00eda" : "d\u00edas"} consecutivos
+              Racha actual: {streak} {streak === 1 ? "día" : "días"} consecutivos
             </p>
           )}
         </div>
@@ -126,54 +147,108 @@ export default function ProgressPage() {
 
       {/* Tarjetas resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
+
+        {/* Días registrados */}
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Dias registrados</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Días registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{stats.daysWithEntry}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {stats.totalDays} dias \u00b7 {percentage}%</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {stats.totalDays} días · {percentage}%</p>
         </div>
 
+        {/* Racha */}
         {isCurrentMonth && streak > 0 && (
           <div style={{ backgroundColor: streak >= 3 ? "#fffbeb" : "#f0fff4", border: `1px solid ${streak >= 3 ? "#f6ad55" : "#68d391"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
             <p style={{ fontSize: "0.75rem", color: streak >= 3 ? "#975a16" : "#276749", fontWeight: 500 }}>Racha actual</p>
             <p style={{ fontSize: "1.75rem", fontWeight: 700, color: streak >= 3 ? "#c05621" : "#276749", lineHeight: 1.2, marginTop: "0.375rem" }}>
-              {streak} {streak === 1 ? "d\u00eda" : "d\u00edas"}
+              {streak} {streak === 1 ? "día" : "días"}
             </p>
             <p style={{ fontSize: "0.75rem", color: streak >= 3 ? "#975a16" : "#276749", marginTop: "0.25rem", opacity: 0.8 }}>
-              {streak >= 7 ? "\u00a1Racha excelente! \uD83D\uDD25" : streak >= 3 ? "\u00a1Sigue as\u00ed! \u2B50" : "Buen inicio"}
+              {streak >= 7 ? "¡Racha excelente! 🔥" : streak >= 3 ? "¡Sigue así! ⭐" : "Buen inicio"}
             </p>
           </div>
         )}
 
-        <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#fff", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emocion predominante</p>
-          <p style={{ fontSize: "1.375rem", fontWeight: 700, color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", lineHeight: 1.2, marginTop: "0.375rem" }}>
-            {dominantOption ? dominantOption.emoji + " " + dominantOption.label : "Sin datos"}
+        {/* Emoción predominante */}
+        <div style={{
+          backgroundColor: dominantOption ? dominantOption.bg : "#f7fafc",
+          border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`,
+          borderRadius: "0.75rem",
+          padding: "1.125rem",
+        }}>
+          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>
+            Emoción predominante
           </p>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", marginTop: "0.25rem", opacity: 0.8 }}>Este mes</p>
+          {dominantOption ? (
+            <>
+              <p style={{ fontSize: "1.375rem", fontWeight: 700, color: dominantOption.color, lineHeight: 1.2, marginTop: "0.375rem" }}>
+                {dominantOption.emoji} {dominantOption.label}
+              </p>
+              <p style={{ fontSize: "0.75rem", color: dominantOption.color, marginTop: "0.25rem", opacity: 0.8 }}>
+                {isCurrentMonth ? "Este mes" : "Ese mes"}
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-text-muted)", lineHeight: 1.3, marginTop: "0.375rem" }}>
+                Sin predominante
+              </p>
+              <p style={{ fontSize: "0.7rem", color: "var(--mc-text-muted)", marginTop: "0.25rem", opacity: 0.8, lineHeight: 1.4 }}>
+                {stats.daysWithEntry === 0 ? "Aún no hay registros" : "Las emociones están variadas"}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Grafica */}
+      {/* Gráfica con toggle */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem 1.25rem 1rem", marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de animo por dia</h2>
-        {recordsWithMood.length === 0 ? (
-          <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
-            No hay registros este mes.
+
+        {/* Header con toggles */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
+            {chartMode === "dia" ? "Estado de ánimo por día" : "Frecuencia de emociones"}
+          </h2>
+          <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.5rem", padding: "0.2rem" }}>
+            <button onClick={() => setChartMode("frecuencia")} style={tabStyle(chartMode === "frecuencia")}>Frecuencia</button>
+            <button onClick={() => setChartMode("dia")} style={tabStyle(chartMode === "dia")}>Por día</button>
           </div>
-        ) : (
-          <MoodChart records={stats.records} />
-        )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.625rem", marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid var(--mc-border)" }}>
-          {MOOD_OPTIONS.map((option) => (
-            <div key={option.value} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: option.color, flexShrink: 0 }} />
-              <span style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)" }}>{option.label}</span>
-            </div>
-          ))}
         </div>
+
+        {/* Toggle barras / circular (solo en modo frecuencia) */}
+        {chartMode === "frecuencia" && recordsWithMood.length > 0 && (
+          <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.5rem", padding: "0.2rem", marginBottom: "0.875rem", width: "fit-content" }}>
+            <button onClick={() => setFreqType("bar")} style={tabStyle(freqType === "bar")}>📊 Barras</button>
+            <button onClick={() => setFreqType("pie")} style={tabStyle(freqType === "pie")}>🥧 Circular</button>
+          </div>
+        )}
+
+        {/* Gráfica */}
+        {chartMode === "dia" ? (
+          recordsWithMood.length === 0 ? (
+            <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
+              No hay registros este mes.
+            </div>
+          ) : (
+            <MoodDayChart records={stats.records} />
+          )
+        ) : (
+          <MoodFreqChart moodCounts={moodCounts} chartType={freqType} />
+        )}
+
+        {/* Leyenda */}
+        {chartMode === "dia" && recordsWithMood.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.625rem", marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid var(--mc-border)" }}>
+            {MOOD_OPTIONS.map((option) => (
+              <div key={option.value} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: option.color, flexShrink: 0 }} />
+                <span style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)" }}>{option.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Lista */}
+      {/* Lista de registros */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", overflow: "hidden" }}>
         <div style={{ padding: "1.125rem 1.25rem", borderBottom: "1px solid var(--mc-border)" }}>
           <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Registro del mes</h2>

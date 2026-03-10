@@ -13,7 +13,18 @@ export async function GET() {
       where: { id: session.user.id },
       include: {
         patientProfile: {
-          include: { emergencyContact: true },
+          include: {
+            emergencyContact: true,
+            therapistLinks: {
+              include: {
+                therapistProfile: {
+                  include: { user: { select: { name: true, email: true } } },
+                },
+              },
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
         },
       },
     });
@@ -21,6 +32,14 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "Usuario no encontrado." }, { status: 404 });
     }
+
+    const latestLink = user.patientProfile?.therapistLinks?.[0];
+    const linkedTherapist = latestLink
+      ? {
+          name: latestLink.therapistProfile.user.name ?? "",
+          email: latestLink.therapistProfile.user.email ?? "",
+        }
+      : null;
 
     return NextResponse.json({
       name: user.name,
@@ -34,6 +53,7 @@ export async function GET() {
         phone: user.patientProfile?.emergencyContact?.phone ?? "",
         relationship: user.patientProfile?.emergencyContact?.relationship ?? "",
       },
+      linkedTherapist,
     });
   } catch (error) {
     console.error("Error al obtener perfil:", error);

@@ -6,12 +6,24 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { PatientProfile } from "@/types/profile";
 
+const RELATIONSHIP_OPTIONS = [
+  "Madre",
+  "Padre",
+  "Hermano/a",
+  "Pareja",
+  "Amigo/a",
+  "Terapeuta",
+  "Tutor/a",
+  "Otro",
+];
+
 const EMPTY_PROFILE: PatientProfile = {
   name: "",
   email: "",
   phone: "",
   birthdate: "",
   emergencyContact: { name: "", phone: "", relationship: "" },
+  linkedTherapist: null,
 };
 
 type Section = "personal" | "emergency" | "link";
@@ -66,7 +78,7 @@ export default function ProfilePage() {
         body: JSON.stringify(profile),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Ocurrio un error al guardar."); return; }
+      if (!res.ok) { setError(data.error || "Ocurrió un error al guardar."); return; }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -89,9 +101,10 @@ export default function ProfilePage() {
         body: JSON.stringify({ code: linkCode }),
       });
       const data = await res.json();
-      if (!res.ok) { setLinkError(data.error || "Ocurrio un error."); return; }
+      if (!res.ok) { setLinkError(data.error || "Ocurrió un error."); return; }
       setLinkSuccess(`Vinculado correctamente con ${data.therapistName}.`);
       setLinkCode("");
+      fetchProfile();
     } catch {
       setLinkError("No se pudo conectar con el servidor.");
     } finally {
@@ -102,7 +115,7 @@ export default function ProfilePage() {
   const tabs: { value: Section; label: string }[] = [
     { value: "personal", label: "Datos personales" },
     { value: "emergency", label: "Contacto de emergencia" },
-    { value: "link", label: "Vincular psicologo" },
+    { value: "link", label: "Vincular psicólogo" },
   ];
 
   if (loading) {
@@ -115,13 +128,12 @@ export default function ProfilePage() {
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "580px" }}>
+
       {/* Encabezado */}
       <div style={{ marginBottom: "1.75rem" }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 600, color: "var(--mc-text)", letterSpacing: "-0.01em" }}>
-          Perfil
-        </h1>
+        <h1 style={{ fontSize: "1.375rem", fontWeight: 600, color: "var(--mc-text)", letterSpacing: "-0.01em" }}>Perfil</h1>
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>
-          Tu informacion personal y de contacto
+          Tu información personal y de contacto
         </p>
       </div>
 
@@ -166,27 +178,59 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Contenido de tabs */}
+      {/* Contenido */}
       {activeSection !== "link" ? (
         <form onSubmit={handleSubmit} style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem" }}>
+
           {activeSection === "personal" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
               <Input label="Nombre completo" type="text" value={profile.name} onChange={(e) => updateField("name", e.target.value)} required />
-              <Input label="Correo electronico" type="email" value={profile.email} onChange={(e) => updateField("email", e.target.value)} required disabled />
-              <Input label="Telefono" type="tel" value={profile.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="10 digitos" />
+              <Input label="Correo electrónico" type="email" value={profile.email} onChange={(e) => updateField("email", e.target.value)} required disabled />
+              <Input label="Teléfono" type="tel" value={profile.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="10 dígitos" />
               <Input label="Fecha de nacimiento" type="date" value={profile.birthdate} onChange={(e) => updateField("birthdate", e.target.value)} />
             </div>
           )}
+
           {activeSection === "emergency" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
               <div style={{ padding: "0.875rem 1rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "0.625rem", fontSize: "0.8125rem", color: "#c53030", lineHeight: 1.5 }}>
-                Este contacto se usara cuando presiones el boton de emergencia.
+                Este contacto se usará cuando presiones el botón de emergencia.
               </div>
               <Input label="Nombre del contacto" type="text" value={profile.emergencyContact.name} onChange={(e) => updateEmergency("name", e.target.value)} placeholder="Nombre completo" />
-              <Input label="Telefono" type="tel" value={profile.emergencyContact.phone} onChange={(e) => updateEmergency("phone", e.target.value)} placeholder="10 digitos" />
-              <Input label="Relacion" type="text" value={profile.emergencyContact.relationship} onChange={(e) => updateEmergency("relationship", e.target.value)} placeholder="Familiar, amigo, terapeuta..." />
+              <Input label="Teléfono" type="tel" value={profile.emergencyContact.phone} onChange={(e) => updateEmergency("phone", e.target.value)} placeholder="10 dígitos" />
+
+              {/* Relación — select predefinido */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)" }}>Relación</label>
+                <select
+                  value={profile.emergencyContact.relationship}
+                  onChange={(e) => updateEmergency("relationship", e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.625rem 0.875rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid var(--mc-border)",
+                    fontSize: "0.875rem",
+                    color: profile.emergencyContact.relationship ? "var(--mc-text)" : "var(--mc-text-muted)",
+                    backgroundColor: "#fff",
+                    outline: "none",
+                    cursor: "pointer",
+                    appearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 0.875rem center",
+                    paddingRight: "2.25rem",
+                  }}
+                >
+                  <option value="" disabled>Selecciona una opción</option>
+                  {RELATIONSHIP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
+
           {error && (
             <div style={{ marginTop: "1.25rem", padding: "0.625rem 1rem", borderRadius: "0.5rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", fontSize: "0.8125rem", color: "#c53030" }}>
               {error}
@@ -202,12 +246,42 @@ export default function ProfilePage() {
           </div>
         </form>
       ) : (
-        <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem" }}>
-          <form onSubmit={handleLink} style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
-            <div style={{ padding: "0.875rem 1rem", backgroundColor: "var(--mc-sky)", border: "1px solid var(--mc-teal)", borderRadius: "0.625rem", fontSize: "0.8125rem", color: "var(--mc-primary)", lineHeight: 1.5 }}>
-              Ingresa el codigo que te dio tu psicologo para que pueda ver tu progreso desde su panel.
+        <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+          {/* Terapeuta actualmente vinculado */}
+          {profile.linkedTherapist ? (
+            <div style={{ padding: "1rem", backgroundColor: "var(--mc-sky)", border: "1px solid var(--mc-teal)", borderRadius: "0.75rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
+              <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.125rem", flexShrink: 0 }}>
+                🧑‍⚕️
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--mc-primary)" }}>
+                  {profile.linkedTherapist.name}
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>
+                  {profile.linkedTherapist.email}
+                </p>
+              </div>
+              <span style={{ fontSize: "0.7rem", fontWeight: 500, color: "#276749", backgroundColor: "#f0fff4", border: "1px solid #9ae6b4", borderRadius: "1rem", padding: "0.25rem 0.625rem" }}>
+                Vinculado
+              </span>
             </div>
-            <Input label="Codigo de invitacion" type="text" value={linkCode} onChange={(e) => setLinkCode(e.target.value.toUpperCase())} placeholder="Ej. AB3DEFGH" required />
+          ) : (
+            <div style={{ padding: "0.875rem 1rem", backgroundColor: "var(--mc-sky)", border: "1px solid var(--mc-teal)", borderRadius: "0.625rem", fontSize: "0.8125rem", color: "var(--mc-primary)", lineHeight: 1.5 }}>
+              Ingresa el código que te dio tu psicólogo para que pueda ver tu progreso desde su panel.
+            </div>
+          )}
+
+          {/* Formulario de vincular */}
+          <form onSubmit={handleLink} style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
+            <Input
+              label={profile.linkedTherapist ? "Vincular otro psicólogo" : "Código de invitación"}
+              type="text"
+              value={linkCode}
+              onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+              placeholder="Ej. AB3DEFGH"
+              required
+            />
             {linkError && (
               <div style={{ padding: "0.625rem 1rem", borderRadius: "0.5rem", backgroundColor: "#fff5f5", border: "1px solid #fed7d7", fontSize: "0.8125rem", color: "#c53030" }}>
                 {linkError}
@@ -225,31 +299,15 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Cerrar sesion — visible en mobile, redundante pero util en desktop */}
+      {/* Cerrar sesión */}
       <div
         className="profile-signout"
         style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--mc-border)" }}
       >
-        <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 500 }}>
-          Sesion
-        </p>
+        <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 500 }}>Sesión</p>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          style={{
-            width: "100%",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.625rem",
-            border: "1px solid #fed7d7",
-            backgroundColor: "#fff5f5",
-            color: "#c53030",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.625rem",
-            transition: "background-color 0.15s",
-          }}
+          style={{ width: "100%", padding: "0.75rem 1rem", borderRadius: "0.625rem", border: "1px solid #fed7d7", backgroundColor: "#fff5f5", color: "#c53030", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "0.625rem", transition: "background-color 0.15s" }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fed7d7")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fff5f5")}
         >
@@ -258,7 +316,7 @@ export default function ProfilePage() {
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          Cerrar sesion
+          Cerrar sesión
         </button>
       </div>
     </div>
