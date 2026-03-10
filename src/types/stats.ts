@@ -11,6 +11,7 @@ export interface MonthlyStats {
   year: number;
   records: DailyMoodRecord[];
   dominantMood: Mood | null;
+  moodCounts: Record<string, number>;
   daysWithEntry: number;
   totalDays: number;
   streak: number;
