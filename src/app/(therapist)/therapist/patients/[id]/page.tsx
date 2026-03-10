@@ -35,13 +35,13 @@ interface SessionNote {
 }
 
 const MOOD_LABELS: Record<string, string> = {
-  alegria: "Alegr\u00eda",
+  alegria: "Alegría",
   tristeza: "Tristeza",
   enojo: "Enojo",
   miedo: "Miedo",
   tedio: "Fastidio",
   ansiedad: "Ansiedad",
-  no_lo_se: "No lo s\u00e9",
+  no_lo_se: "No lo sé",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -81,15 +81,17 @@ function formatDateLong(dateStr: string): string {
 
 function formatDateTime(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) +
-    " \u00b7 " +
-    d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  return (
+    d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) +
+    " · " +
+    d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+  );
 }
 
 function toMoodRecords(records: PatientDetail["records"]): DailyMoodRecord[] {
   return records.map((r) => ({
     date: r.date,
-    mood: (r.mood as Mood | null),
+    mood: r.mood as Mood | null,
     hasNote: r.hasNote,
   }));
 }
@@ -110,7 +112,7 @@ async function downloadPDF(patient: PatientDetail) {
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   doc.setFillColor(...PRIMARY); doc.rect(0, 0, 210, 32, "F");
   doc.setTextColor(...WHITE); doc.setFontSize(20); doc.setFont("helvetica", "bold"); doc.text("Mentcheck", 14, 14);
-  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("Agenda terap\u00e9utica", 14, 20);
+  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("Agenda terapéutica", 14, 20);
   doc.setFontSize(11); doc.text("Reporte del Paciente", 14, 28);
   const today = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
   doc.setFontSize(8); doc.text(`Generado: ${today}`, 196, 28, { align: "right" });
@@ -120,7 +122,7 @@ async function downloadPDF(patient: PatientDetail) {
   const personalData: [string, string][] = [
     ["Nombre", patient.name || "No registrado"],
     ["Correo", patient.email || "No registrado"],
-    ["Tel\u00e9fono", patient.phone || "No registrado"],
+    ["Teléfono", patient.phone || "No registrado"],
     ["Fecha de nacimiento", formatDateLong(patient.birthdate)],
   ];
   personalData.forEach(([label, value]) => {
@@ -129,11 +131,11 @@ async function downloadPDF(patient: PatientDetail) {
   });
   y += 4;
   doc.setTextColor(...PRIMARY); doc.setFontSize(11); doc.setFont("helvetica", "bold");
-  doc.text(`Resumen \u2014 ${patient.month} ${patient.year}`, 14, y);
+  doc.text(`Resumen — ${patient.month} ${patient.year}`, 14, y);
   y += 2; doc.setDrawColor(...SKY); doc.line(14, y + 2, 196, y + 2); y += 8;
   const summaryData: [string, string][] = [
-    ["D\u00edas registrados", `${daysWithEntry} de ${patient.records.length} d\u00edas (${percentage}%)`],
-    ["Emoci\u00f3n predominante", dominantMood ? (MOOD_LABELS[dominantMood] ?? dominantMood) : "Sin datos"],
+    ["Días registrados", `${daysWithEntry} de ${patient.records.length} días (${percentage}%)`],
+    ["Emoción predominante", dominantMood ? (MOOD_LABELS[dominantMood] ?? dominantMood) : "Sin datos"],
   ];
   summaryData.forEach(([label, value]) => {
     doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...MUTED); doc.text(label + ":", 14, y);
@@ -144,7 +146,7 @@ async function downloadPDF(patient: PatientDetail) {
   y += 2; doc.setDrawColor(...SKY); doc.line(14, y + 2, 196, y + 2); y += 8;
   doc.setFillColor(...SKY); doc.rect(14, y - 5, 182, 7, "F");
   doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY);
-  doc.text("Fecha", 16, y); doc.text("Estado de \u00e1nimo", 70, y); doc.text("Nota", 130, y); y += 5;
+  doc.text("Fecha", 16, y); doc.text("Estado de ánimo", 70, y); doc.text("Nota", 130, y); y += 5;
   recordsWithMood.slice().reverse().forEach((record, idx) => {
     if (y > 272) { doc.addPage(); y = 20; }
     if (idx % 2 === 0) { doc.setFillColor(248, 252, 255); doc.rect(14, y - 4, 182, 6.5, "F"); }
@@ -158,15 +160,16 @@ async function downloadPDF(patient: PatientDetail) {
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
-    doc.text("Mentcheck \u2014 Agenda terap\u00e9utica", 14, 291);
-    doc.text(`P\u00e1gina ${i} de ${pageCount}`, 196, 291, { align: "right" });
+    doc.text("Mentcheck — Agenda terapéutica", 14, 291);
+    doc.text(`Página ${i} de ${pageCount}`, 196, 291, { align: "right" });
   }
   doc.save(`mentcheck-${patient.name.replace(/\s+/g, "-").toLowerCase()}-${patient.month.toLowerCase()}-${patient.year}.pdf`);
 }
 
 // ─── Calendario ───────────────────────────────────────────────────────────────
 interface CalendarProps {
-  year: number; month: number;
+  year: number;
+  month: number;
   records: { date: string; mood: string | null }[];
   isCurrentMonth: boolean;
 }
@@ -180,7 +183,11 @@ function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: "0.375rem" }}>
-        {weekDays.map((d) => <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>{d}</div>)}
+        {weekDays.map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: "0.6875rem", fontWeight: 600, color: "var(--mc-text-muted)", padding: "0.25rem 0" }}>
+            {d}
+          </div>
+        ))}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
         {Array.from({ length: offset }).map((_, i) => <div key={`e-${i}`} />)}
@@ -190,9 +197,35 @@ function EmotionCalendar({ year, month, records, isCurrentMonth }: CalendarProps
           const isToday = isCurrentMonth && today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
           const isFuture = isCurrentMonth && day > today.getDate();
           return (
-            <div key={day} title={option ? option.label : isFuture ? "" : "Sin registro"} style={{ aspectRatio: "1", borderRadius: "0.5rem", backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc", border: isToday ? "2px solid var(--mc-primary)" : option ? `1px solid ${option.color}40` : isFuture ? "1px dashed #e2e8f0" : "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1px" }}>
-              <span style={{ fontSize: "0.5625rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)", lineHeight: 1 }}>{day}</span>
-              {option ? <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span> : !isFuture ? <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} /> : null}
+            <div
+              key={day}
+              title={option ? option.label : isFuture ? "" : "Sin registro"}
+              style={{
+                aspectRatio: "1",
+                borderRadius: "0.5rem",
+                backgroundColor: option ? option.bg : isFuture ? "transparent" : "#f7fafc",
+                border: isToday
+                  ? "2px solid var(--mc-primary)"
+                  : option
+                  ? `1px solid ${option.color}40`
+                  : isFuture
+                  ? "1px dashed #e2e8f0"
+                  : "1px solid #e2e8f0",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1px",
+              }}
+            >
+              <span style={{ fontSize: "0.5625rem", fontWeight: isToday ? 700 : 400, color: isToday ? "var(--mc-primary)" : "var(--mc-text-muted)", lineHeight: 1 }}>
+                {day}
+              </span>
+              {option ? (
+                <span style={{ fontSize: "0.9375rem", lineHeight: 1 }}>{option.emoji}</span>
+              ) : !isFuture ? (
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", backgroundColor: "#cbd5e0" }} />
+              ) : null}
             </div>
           );
         })}
@@ -253,7 +286,7 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   }
 
   async function handleDelete(apptId: string) {
-    if (!confirm("\u00bfEliminar esta cita?")) return;
+    if (!confirm("¿Eliminar esta cita?")) return;
     await fetch(`/api/therapist/patients/${patientId}/appointments/${apptId}`, { method: "DELETE" });
     load();
   }
@@ -264,7 +297,10 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
+        >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nueva cita
         </button>
@@ -288,7 +324,9 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
           </div>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", backgroundColor: "#fff", color: "var(--mc-text-muted)", fontSize: "0.8125rem", cursor: "pointer" }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Guardando..." : "Guardar cita"}</button>
+            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Guardando..." : "Guardar cita"}
+            </button>
           </div>
         </form>
       )}
@@ -299,7 +337,7 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", textAlign: "center", padding: "2rem 0" }}>Sin citas registradas.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-          {upcoming.length > 0 && <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Pr\u00f3ximas</p>}
+          {upcoming.length > 0 && <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Próximas</p>}
           {upcoming.map((a) => <AppointmentCard key={a.id} appt={a} onStatus={handleStatus} onDelete={handleDelete} updating={updatingId === a.id} />)}
           {past.length > 0 && <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.5rem" }}>Historial</p>}
           {past.map((a) => <AppointmentCard key={a.id} appt={a} onStatus={handleStatus} onDelete={handleDelete} updating={updatingId === a.id} />)}
@@ -309,20 +347,27 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   );
 }
 
-function AppointmentCard({ appt, onStatus, onDelete, updating }: { appt: Appointment; onStatus: (id: string, s: string) => void; onDelete: (id: string) => void; updating: boolean; }) {
+function AppointmentCard({ appt, onStatus, onDelete, updating }: {
+  appt: Appointment;
+  onStatus: (id: string, s: string) => void;
+  onDelete: (id: string) => void;
+  updating: boolean;
+}) {
   return (
     <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "0.875rem 1rem", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
           <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--mc-text)" }}>{formatDateTime(appt.dateTime)}</span>
-          <span style={{ fontSize: "0.6875rem", fontWeight: 500, padding: "0.125rem 0.5rem", borderRadius: "9999px", backgroundColor: STATUS_BG[appt.status], color: STATUS_COLOR[appt.status] }}>{STATUS_LABEL[appt.status]}</span>
+          <span style={{ fontSize: "0.6875rem", fontWeight: 500, padding: "0.125rem 0.5rem", borderRadius: "9999px", backgroundColor: STATUS_BG[appt.status], color: STATUS_COLOR[appt.status] }}>
+            {STATUS_LABEL[appt.status]}
+          </span>
         </div>
         {appt.notes && <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>{appt.notes}</p>}
       </div>
       {appt.status === "pendiente" && (
         <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
-          <button onClick={() => onStatus(appt.id, "completada")} disabled={updating} title="Marcar completada" style={{ padding: "0.3125rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #16a34a", backgroundColor: "#dcfce7", color: "#16a34a", fontSize: "0.75rem", cursor: updating ? "not-allowed" : "pointer" }}>\u2713</button>
-          <button onClick={() => onStatus(appt.id, "cancelada")} disabled={updating} title="Cancelar cita" style={{ padding: "0.3125rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #dc2626", backgroundColor: "#fee2e2", color: "#dc2626", fontSize: "0.75rem", cursor: updating ? "not-allowed" : "pointer" }}>\u00d7</button>
+          <button onClick={() => onStatus(appt.id, "completada")} disabled={updating} title="Marcar completada" style={{ padding: "0.3125rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #16a34a", backgroundColor: "#dcfce7", color: "#16a34a", fontSize: "0.75rem", cursor: updating ? "not-allowed" : "pointer" }}>✓</button>
+          <button onClick={() => onStatus(appt.id, "cancelada")} disabled={updating} title="Cancelar cita" style={{ padding: "0.3125rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #dc2626", backgroundColor: "#fee2e2", color: "#dc2626", fontSize: "0.75rem", cursor: updating ? "not-allowed" : "pointer" }}>×</button>
         </div>
       )}
       {appt.status !== "pendiente" && (
@@ -365,7 +410,9 @@ function NotesTab({ patientId }: NotesTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: formDate, content: formContent }),
       });
-      setShowForm(false); setFormContent(""); setFormDate(new Date().toISOString().split("T")[0]);
+      setShowForm(false);
+      setFormContent("");
+      setFormDate(new Date().toISOString().split("T")[0]);
       load();
     } finally { setSaving(false); }
   }
@@ -373,7 +420,10 @@ function NotesTab({ patientId }: NotesTabProps) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
+        >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nueva nota
         </button>
@@ -382,16 +432,18 @@ function NotesTab({ patientId }: NotesTabProps) {
       {showForm && (
         <form onSubmit={handleCreate} style={{ backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Fecha de la sesi\u00f3n</label>
+            <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Fecha de la sesión</label>
             <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} required style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff", maxWidth: "200px" }} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Notas de la sesi\u00f3n</label>
-            <textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} rows={5} required placeholder="Observaciones cl\u00ednicas, acuerdos, seguimiento..." style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff", resize: "vertical", fontFamily: "inherit" }} />
+            <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Notas de la sesión</label>
+            <textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} rows={5} required placeholder="Observaciones clínicas, acuerdos, seguimiento..." style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff", resize: "vertical", fontFamily: "inherit" }} />
           </div>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", backgroundColor: "#fff", color: "var(--mc-text-muted)", fontSize: "0.8125rem", cursor: "pointer" }}>Cancelar</button>
-            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>{saving ? "Guardando..." : "Guardar nota"}</button>
+            <button type="submit" disabled={saving} style={{ padding: "0.4375rem 0.875rem", borderRadius: "0.5rem", border: "none", backgroundColor: "var(--mc-primary)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Guardando..." : "Guardar nota"}
+            </button>
           </div>
         </form>
       )}
@@ -399,7 +451,7 @@ function NotesTab({ patientId }: NotesTabProps) {
       {loading ? (
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</p>
       ) : notes.length === 0 ? (
-        <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", textAlign: "center", padding: "2rem 0" }}>Sin notas de sesi\u00f3n.</p>
+        <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)", textAlign: "center", padding: "2rem 0" }}>Sin notas de sesión.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {notes.map((note) => (
@@ -416,7 +468,7 @@ function NotesTab({ patientId }: NotesTabProps) {
   );
 }
 
-// ─── P\u00e1gina principal ─────────────────────────────────────────────────────────
+// ─── Página principal ─────────────────────────────────────────────────────────
 export default function PatientDetailPage() {
   const params = useParams();
   const now = new Date();
@@ -438,7 +490,9 @@ export default function PatientDetailPage() {
   }, [params.id, selectedMonth, selectedYear]);
 
   function handleMonthChange(month: number, year: number) {
-    setSelectedMonth(month); setSelectedYear(year); setPatient(null);
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    setPatient(null);
   }
 
   async function handleDownloadPDF() {
@@ -493,7 +547,11 @@ export default function PatientDetailPage() {
               <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)" }}>{patient.email}</p>
             </div>
           </div>
-          <button onClick={handleDownloadPDF} disabled={generating} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: generating ? "var(--mc-surface)" : "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={generating}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: generating ? "var(--mc-surface)" : "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             {generating ? "Generando..." : "Descargar PDF"}
           </button>
@@ -505,9 +563,9 @@ export default function PatientDetailPage() {
         <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "1rem" }}>Datos personales</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
           {[
-            { label: "Tel\u00e9fono", value: patient.phone || "No registrado", icon: "\uD83D\uDCDE" },
-            { label: "Fecha de nacimiento", value: patient.birthdate ? formatDateLong(patient.birthdate) : "No registrada", icon: "\uD83C\uDF82" },
-            { label: "Correo", value: patient.email, icon: "\u2709\uFE0F" },
+            { label: "Teléfono", value: patient.phone || "No registrado", icon: "📞" },
+            { label: "Fecha de nacimiento", value: patient.birthdate ? formatDateLong(patient.birthdate) : "No registrada", icon: "🎂" },
+            { label: "Correo", value: patient.email, icon: "✉️" },
           ].map((item) => (
             <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
               <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>{item.icon}</span>
@@ -529,25 +587,23 @@ export default function PatientDetailPage() {
       {/* Tarjetas resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>D\u00edas registrados</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Días registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{daysWithEntry}</p>
-<<<<<<< Updated upstream
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} d\u00edas \u00b7 {percentage}%</p>
-=======
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} dias  {percentage}%</p>
->>>>>>> Stashed changes
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {patient.records.length} días · {percentage}%</p>
         </div>
         <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#fff", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emoci\u00f3n predominante</p>
+          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emoción predominante</p>
           <p style={{ fontSize: "1.25rem", fontWeight: 700, color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", lineHeight: 1.2, marginTop: "0.375rem" }}>
             {dominantOption ? `${dominantOption.emoji} ${dominantOption.label}` : "Sin datos"}
           </p>
         </div>
       </div>
 
-      {/* Gr\u00e1fica */}
+      {/* Gráfica */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de \u00e1nimo \u2014 {patient.month} {patient.year}</h2>
+        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>
+          Estado de ánimo — {patient.month} {patient.year}
+        </h2>
         {recordsWithMood.length === 0 ? (
           <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Sin registros este mes.</div>
         ) : (
@@ -577,8 +633,12 @@ export default function PatientDetailPage() {
           <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Expediente</h2>
           <div style={{ display: "flex", gap: "0.25rem", backgroundColor: "var(--mc-surface)", borderRadius: "0.5rem", padding: "0.25rem" }}>
             {(["citas", "notas"] as const).map((tab) => (
-              <button key={tab} onClick={() => setExpedienteTab(tab)} style={{ padding: "0.3125rem 0.875rem", borderRadius: "0.375rem", border: "none", backgroundColor: expedienteTab === tab ? "#fff" : "transparent", color: expedienteTab === tab ? "var(--mc-primary)" : "var(--mc-text-muted)", fontSize: "0.8125rem", fontWeight: expedienteTab === tab ? 600 : 400, cursor: "pointer", boxShadow: expedienteTab === tab ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
-                {tab === "citas" ? "\uD83D\uDCC5 Citas" : "\uD83D\uDCDD Notas"}
+              <button
+                key={tab}
+                onClick={() => setExpedienteTab(tab)}
+                style={{ padding: "0.3125rem 0.875rem", borderRadius: "0.375rem", border: "none", backgroundColor: expedienteTab === tab ? "#fff" : "transparent", color: expedienteTab === tab ? "var(--mc-primary)" : "var(--mc-text-muted)", fontSize: "0.8125rem", fontWeight: expedienteTab === tab ? 600 : 400, cursor: "pointer", boxShadow: expedienteTab === tab ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}
+              >
+                {tab === "citas" ? "📅 Citas" : "📝 Notas"}
               </button>
             ))}
           </div>
@@ -602,7 +662,7 @@ export default function PatientDetailPage() {
             return (
               <div key={record.date} style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid var(--mc-border)", display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
                 <span style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: option ? option.bg : "var(--mc-surface)", border: `1.5px solid ${option ? option.color : "var(--mc-border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: option ? "1rem" : "0.625rem", flexShrink: 0 }}>
-                  {option ? option.emoji : "\u2014"}
+                  {option ? option.emoji : "—"}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "0.875rem", fontWeight: 500, color: option ? option.color : "var(--mc-text-muted)" }}>
