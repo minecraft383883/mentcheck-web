@@ -110,7 +110,7 @@ function LoginForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder="········"
             required
           />
 
@@ -133,16 +133,6 @@ function LoginForm() {
             Iniciar sesión
           </Button>
         </form>
-
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--mc-border)" }} />
-          <span className="text-xs" style={{ color: "var(--mc-text-muted)" }}>o</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--mc-border)" }} />
-        </div>
-
-        <Button type="button" variant="secondary" fullWidth>
-          Continuar como invitado
-        </Button>
 
         <p className="text-center text-sm mt-6" style={{ color: "var(--mc-text-muted)" }}>
           ¿No tienes cuenta?{" "}

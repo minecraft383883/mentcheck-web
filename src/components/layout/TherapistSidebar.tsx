@@ -120,8 +120,6 @@ export default function TherapistSidebar() {
             </Link>
           );
         })}
-
-        {/* Logout mobile */}
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0.625rem 0.25rem", gap: "0.25rem", color: "#c53030", backgroundColor: "transparent", border: "none", fontSize: "0.6875rem", fontWeight: 400, cursor: "pointer" }}

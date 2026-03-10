@@ -15,7 +15,7 @@ interface DashboardData {
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Buenos dias";
+  if (hour < 12) return "Buenos días";
   if (hour < 19) return "Buenas tardes";
   return "Buenas noches";
 }
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Tarjeta estado del dia */}
+      {/* Tarjeta estado del día */}
       <div
         style={{
           backgroundColor: data.hasEntryToday
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           >
             {data.hasEntryToday
               ? `${moodOption?.emoji ?? ""} ${moodOption?.label ?? data.lastMood}`
-              : "¿Como te sientes hoy?"}
+              : "¿Cómo te sientes hoy?"}
           </p>
         </div>
         <Link
@@ -237,7 +237,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Accesos rapidos */}
+      {/* Accesos rápidos */}
       <div
         style={{
           display: "grid",
@@ -247,9 +247,9 @@ export default function DashboardPage() {
         }}
       >
         {[
-          { href: "/dashboard/diary", label: "Diario", desc: "Escribe tu dia" },
+          { href: "/dashboard/diary", label: "Diario", desc: "Escribe tu día" },
           { href: "/dashboard/reminders", label: "Recordatorios", desc: "Gestiona tus alarmas" },
-          { href: "/dashboard/progress", label: "Progreso", desc: "Ve tus estadisticas" },
+          { href: "/dashboard/progress", label: "Progreso", desc: "Ve tus estadísticas" },
           { href: "/dashboard/profile", label: "Perfil", desc: "Edita tus datos" },
         ].map((item) => (
           <Link
@@ -284,7 +284,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Boton emergencia */}
+      {/* Botón emergencia */}
       {data.emergencyPhone && (
         <a
           href={`tel:${data.emergencyPhone}`}
