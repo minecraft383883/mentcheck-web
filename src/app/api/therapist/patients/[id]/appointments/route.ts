@@ -53,11 +53,21 @@ export async function POST(
 
     if (!dateTime) return NextResponse.json({ error: "La fecha y hora son requeridas." }, { status: 400 });
 
+    // Validar que la cita no sea en el pasado
+    const appointmentDate = new Date(dateTime);
+    const now = new Date();
+    if (appointmentDate < now) {
+      return NextResponse.json(
+        { error: "No se pueden agendar citas en fechas pasadas." },
+        { status: 400 }
+      );
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         therapistProfileId: therapist.id,
         patientProfileId: id,
-        dateTime: new Date(dateTime),
+        dateTime: appointmentDate,
         notes: notes ?? null,
       },
     });
