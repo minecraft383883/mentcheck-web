@@ -96,7 +96,9 @@ export default function ProgressPage() {
     );
   }
 
-  const dominantOption = stats.dominantMood ? MOOD_OPTIONS.find((m) => m.value === stats.dominantMood) : null;
+  const dominantOption = stats.dominantMood
+    ? MOOD_OPTIONS.find((m) => m.value === stats.dominantMood)
+    : null;
   const recordsWithMood = stats.records.filter((r) => r.mood !== null);
   const percentage = Math.round((stats.daysWithEntry / stats.totalDays) * 100);
   const streak = stats.streak ?? 0;
@@ -126,12 +128,14 @@ export default function ProgressPage() {
 
       {/* Tarjetas resumen */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.75rem" }}>
+        {/* Días registrados */}
         <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>Dias registrados</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", fontWeight: 500 }}>D\u00edas registrados</p>
           <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--mc-primary)", lineHeight: 1.2, marginTop: "0.375rem" }}>{stats.daysWithEntry}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {stats.totalDays} dias \u00b7 {percentage}%</p>
+          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.25rem" }}>de {stats.totalDays} d\u00edas \u00b7 {percentage}%</p>
         </div>
 
+        {/* Racha */}
         {isCurrentMonth && streak > 0 && (
           <div style={{ backgroundColor: streak >= 3 ? "#fffbeb" : "#f0fff4", border: `1px solid ${streak >= 3 ? "#f6ad55" : "#68d391"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
             <p style={{ fontSize: "0.75rem", color: streak >= 3 ? "#975a16" : "#276749", fontWeight: 500 }}>Racha actual</p>
@@ -144,18 +148,43 @@ export default function ProgressPage() {
           </div>
         )}
 
-        <div style={{ backgroundColor: dominantOption ? dominantOption.bg : "#fff", border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`, borderRadius: "0.75rem", padding: "1.125rem" }}>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>Emocion predominante</p>
-          <p style={{ fontSize: "1.375rem", fontWeight: 700, color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", lineHeight: 1.2, marginTop: "0.375rem" }}>
-            {dominantOption ? dominantOption.emoji + " " + dominantOption.label : "Sin datos"}
+        {/* Emoción predominante — solo si aparece más de 1 vez */}
+        <div style={{
+          backgroundColor: dominantOption ? dominantOption.bg : "#f7fafc",
+          border: `1px solid ${dominantOption ? dominantOption.color : "var(--mc-border)"}`,
+          borderRadius: "0.75rem",
+          padding: "1.125rem",
+        }}>
+          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", fontWeight: 500 }}>
+            Emoci\u00f3n predominante
           </p>
-          <p style={{ fontSize: "0.75rem", color: dominantOption ? dominantOption.color : "var(--mc-text-muted)", marginTop: "0.25rem", opacity: 0.8 }}>Este mes</p>
+          {dominantOption ? (
+            <>
+              <p style={{ fontSize: "1.375rem", fontWeight: 700, color: dominantOption.color, lineHeight: 1.2, marginTop: "0.375rem" }}>
+                {dominantOption.emoji} {dominantOption.label}
+              </p>
+              <p style={{ fontSize: "0.75rem", color: dominantOption.color, marginTop: "0.25rem", opacity: 0.8 }}>
+                {isCurrentMonth ? "Este mes" : "Ese mes"}
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-text-muted)", lineHeight: 1.3, marginTop: "0.375rem" }}>
+                Sin predominante
+              </p>
+              <p style={{ fontSize: "0.7rem", color: "var(--mc-text-muted)", marginTop: "0.25rem", opacity: 0.8, lineHeight: 1.4 }}>
+                {stats.daysWithEntry === 0
+                  ? "A\u00fan no hay registros"
+                  : "Las emociones est\u00e1n variadas"}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Grafica */}
+      {/* Gráfica */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem 1.25rem 1rem", marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de animo por dia</h2>
+        <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)", marginBottom: "1rem" }}>Estado de \u00e1nimo por d\u00eda</h2>
         {recordsWithMood.length === 0 ? (
           <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>
             No hay registros este mes.
@@ -173,7 +202,7 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      {/* Lista */}
+      {/* Lista de registros */}
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", overflow: "hidden" }}>
         <div style={{ padding: "1.125rem 1.25rem", borderBottom: "1px solid var(--mc-border)" }}>
           <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>Registro del mes</h2>
