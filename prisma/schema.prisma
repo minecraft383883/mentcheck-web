@@ -34,6 +34,12 @@ enum ReminderStatus {
   completado
 }
 
+enum AppointmentStatus {
+  pendiente
+  completada
+  cancelada
+}
+
 model User {
   id               String            @id @default(cuid())
   name             String
@@ -63,6 +69,8 @@ model PatientProfile {
   diaryEntries     DiaryEntry[]
   reminders        Reminder[]
   therapists       TherapistPatient[]
+  appointments     Appointment[]
+  sessionNotes     SessionNote[]
 }
 
 model TherapistProfile {
@@ -74,6 +82,8 @@ model TherapistProfile {
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   inviteCodes      InviteCode[]
   patients         TherapistPatient[]
+  appointments     Appointment[]
+  sessionNotes     SessionNote[]
 }
 
 model EmergencyContact {
@@ -114,6 +124,33 @@ model Reminder {
   updatedAt        DateTime       @updatedAt
 
   patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  therapistProfileId String
+  patientProfileId   String
+  dateTime           DateTime
+  status             AppointmentStatus @default(pendiente)
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  therapistProfile   TherapistProfile  @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+  patientProfile     PatientProfile    @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
+}
+
+model SessionNote {
+  id                 String           @id @default(cuid())
+  therapistProfileId String
+  patientProfileId   String
+  date               DateTime         @db.Date
+  content            String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  therapistProfile   TherapistProfile @relation(fields: [therapistProfileId], references: [id], onDelete: Cascade)
+  patientProfile     PatientProfile   @relation(fields: [patientProfileId], references: [id], onDelete: Cascade)
 }
 
 model Account {
