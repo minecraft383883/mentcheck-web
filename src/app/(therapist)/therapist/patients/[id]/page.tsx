@@ -86,6 +86,11 @@ const STATUS_BG: Record<string, string> = {
   cancelada: "#fee2e2",
 };
 
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("es-MX", {
     weekday: "short",
@@ -138,8 +143,8 @@ async function downloadPDF(patient: PatientDetail) {
   doc.setTextColor(...WHITE); doc.setFontSize(20); doc.setFont("helvetica", "bold"); doc.text("Mentcheck", 14, 14);
   doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("Agenda terapéutica", 14, 20);
   doc.setFontSize(11); doc.text("Reporte del Paciente", 14, 28);
-  const today = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-  doc.setFontSize(8); doc.text(`Generado: ${today}`, 196, 28, { align: "right" });
+  const todayLabel = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+  doc.setFontSize(8); doc.text(`Generado: ${todayLabel}`, 196, 28, { align: "right" });
   let y = 44;
   doc.setTextColor(...PRIMARY); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text("Datos del paciente", 14, y);
   y += 2; doc.setDrawColor(...SKY); doc.setLineWidth(0.4); doc.line(14, y + 2, 196, y + 2); y += 8;
@@ -242,7 +247,10 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   const [formTime, setFormTime] = useState("10:00");
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const minDate = todayStr();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -258,17 +266,38 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!formDate) return;
+    setFormError("");
+
+    // Validación frontend: si eligen hoy, la hora ya debe ser futura
+    const chosen = new Date(`${formDate}T${formTime}:00`);
+    if (chosen <= new Date()) {
+      setFormError("La fecha y hora deben ser posteriores al momento actual.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const dateTime = new Date(`${formDate}T${formTime}:00`).toISOString();
-      await fetch(`/api/therapist/patients/${patientId}/appointments`, {
+      const res = await fetch(`/api/therapist/patients/${patientId}/appointments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dateTime, notes: formNotes || null }),
+        body: JSON.stringify({ dateTime: chosen.toISOString(), notes: formNotes || null }),
       });
+      if (!res.ok) {
+        const data = await res.json();
+        setFormError(data.error ?? "Error al guardar la cita.");
+        return;
+      }
       setShowForm(false); setFormDate(""); setFormTime("10:00"); setFormNotes("");
       load();
     } finally { setSaving(false); }
+  }
+
+  function handleOpenForm() {
+    setShowForm((v) => !v);
+    setFormError("");
+    setFormDate("");
+    setFormTime("10:00");
+    setFormNotes("");
   }
 
   async function handleStatus(apptId: string, status: string) {
@@ -295,7 +324,7 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <button onClick={() => setShowForm((v) => !v)} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
+        <button onClick={handleOpenForm} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid var(--mc-teal)", backgroundColor: "var(--mc-sky)", color: "var(--mc-primary)", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nueva cita
         </button>
@@ -305,13 +334,31 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
               <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Fecha</label>
-              <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} required style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }} />
+              <input
+                type="date"
+                value={formDate}
+                min={minDate}
+                onChange={(e) => { setFormDate(e.target.value); setFormError(""); }}
+                required
+                style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${formError ? "#dc2626" : "var(--mc-border)"}`, fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }}
+              />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
               <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Hora</label>
-              <input type="time" value={formTime} onChange={(e) => setFormTime(e.target.value)} required style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }} />
+              <input
+                type="time"
+                value={formTime}
+                onChange={(e) => { setFormTime(e.target.value); setFormError(""); }}
+                required
+                style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: `1px solid ${formError ? "#dc2626" : "var(--mc-border)"}`, fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff" }}
+              />
             </div>
           </div>
+          {formError && (
+            <p style={{ fontSize: "0.8125rem", color: "#dc2626", backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", padding: "0.5rem 0.75rem" }}>
+              ⚠️ {formError}
+            </p>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
             <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--mc-text-muted)" }}>Notas de la cita (opcional)</label>
             <textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} rows={2} placeholder="Motivo, indicaciones..." style={{ padding: "0.5rem 0.75rem", borderRadius: "0.5rem", border: "1px solid var(--mc-border)", fontSize: "0.875rem", color: "var(--mc-text)", backgroundColor: "#fff", resize: "vertical", fontFamily: "inherit" }} />
@@ -501,7 +548,6 @@ function RemindersTab({ patientId }: RemindersTabProps) {
           Nuevo recordatorio
         </button>
       </div>
-
       {showForm && (
         <form onSubmit={handleCreate} style={{ backgroundColor: "var(--mc-surface)", border: "1px solid var(--mc-border)", borderRadius: "0.75rem", padding: "1.125rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
@@ -533,7 +579,6 @@ function RemindersTab({ patientId }: RemindersTabProps) {
           </div>
         </form>
       )}
-
       {loading ? (
         <p style={{ fontSize: "0.875rem", color: "var(--mc-text-muted)" }}>Cargando...</p>
       ) : reminders.length === 0 ? (
