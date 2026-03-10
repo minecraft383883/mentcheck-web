@@ -15,7 +15,7 @@ export async function GET() {
         patientProfile: {
           include: {
             emergencyContact: true,
-            therapistLinks: {
+            therapists: {
               include: {
                 therapistProfile: {
                   include: { user: { select: { name: true, email: true } } },
@@ -33,7 +33,7 @@ export async function GET() {
       return NextResponse.json({ error: "Usuario no encontrado." }, { status: 404 });
     }
 
-    const latestLink = user.patientProfile?.therapistLinks?.[0];
+    const latestLink = user.patientProfile?.therapists?.[0];
     const linkedTherapist = latestLink
       ? {
           name: latestLink.therapistProfile.user.name ?? "",
