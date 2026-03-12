@@ -8,12 +8,19 @@ import MonthSelector from "@/components/ui/MonthSelector";
 import { MOOD_OPTIONS, Mood } from "@/types/diary";
 import { DailyMoodRecord } from "@/types/stats";
 
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
 interface PatientDetail {
   id: string;
   name: string;
   email: string;
   phone: string;
   birthdate: string;
+  emergencyContact: EmergencyContact | null;
   month: string;
   monthIndex: number;
   year: number;
@@ -125,6 +132,36 @@ function toMoodRecords(records: PatientDetail["records"]): DailyMoodRecord[] {
   }));
 }
 
+// ─── Botón de llamada ─────────────────────────────────────────────────────────
+function CallButton({ phone, label }: { phone: string; label: string }) {
+  if (!phone) return null;
+  const clean = phone.replace(/\s+/g, "");
+  return (
+    <a
+      href={`tel:${clean}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.3rem",
+        padding: "0.3125rem 0.75rem",
+        borderRadius: "0.5rem",
+        border: "1px solid #16a34a",
+        backgroundColor: "#dcfce7",
+        color: "#16a34a",
+        fontSize: "0.75rem",
+        fontWeight: 500,
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.56 3.45 2 2 0 0 1 3.54 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.7a16 16 0 0 0 6 6l.88-.88a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.46 16l.46.92z" />
+      </svg>
+      {label}
+    </a>
+  );
+}
+
 async function downloadPDF(patient: PatientDetail) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -141,11 +178,9 @@ async function downloadPDF(patient: PatientDetail) {
   recordsWithMood.forEach((r) => { if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1; });
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
-  // ── Encabezado con logo ──────────────────────────────────────────
   doc.setFillColor(...PRIMARY);
   doc.rect(0, 0, 210, 36, "F");
 
-  // Cargar logo desde /logo.png
   const logoUrl = "/logo.png";
   const imgData = await fetch(logoUrl)
     .then((r) => r.blob())
@@ -158,7 +193,6 @@ async function downloadPDF(patient: PatientDetail) {
         })
     );
 
-  // Logo a la izquierda (ajusta ancho/alto según tu logo)
   doc.addImage(imgData, "PNG", 10, 4, 28, 28);
 
   doc.setTextColor(...WHITE);
@@ -179,9 +213,8 @@ async function downloadPDF(patient: PatientDetail) {
   doc.setFontSize(8);
   doc.text(`Generado: ${todayLabel}`, 196, 30, { align: "right" });
 
-  let y = 48; // Ajustar inicio del contenido (antes era 44)
+  let y = 48;
 
-  // ── Datos del paciente ──────────────────────────────────────────
   doc.setTextColor(...PRIMARY);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -198,6 +231,13 @@ async function downloadPDF(patient: PatientDetail) {
     ["Teléfono", patient.phone || "No registrado"],
     ["Fecha de nacimiento", formatDateLong(patient.birthdate)],
   ];
+  if (patient.emergencyContact) {
+    personalData.push(
+      ["Contacto de emergencia", patient.emergencyContact.name],
+      ["Relación", patient.emergencyContact.relationship],
+      ["Tel. emergencia", patient.emergencyContact.phone],
+    );
+  }
   personalData.forEach(([label, value]) => {
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
@@ -205,13 +245,12 @@ async function downloadPDF(patient: PatientDetail) {
     doc.text(label + ":", 14, y);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...DARK);
-    doc.text(value, 58, y);
+    doc.text(value, 68, y);
     y += 6.5;
   });
 
   y += 4;
 
-  // ── Resumen del mes ──────────────────────────────────────────────
   doc.setTextColor(...PRIMARY);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -238,7 +277,6 @@ async function downloadPDF(patient: PatientDetail) {
 
   y += 4;
 
-  // ── Registro del mes ──────────────────────────────────────────────
   doc.setTextColor(...PRIMARY);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
@@ -289,7 +327,6 @@ async function downloadPDF(patient: PatientDetail) {
     doc.text("No hay registros este mes.", 14, y);
   }
 
-  // ── Footer en todas las páginas ──────────────────────────────────
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -376,7 +413,6 @@ function AppointmentsTab({ patientId }: AppointmentsTabProps) {
     if (!formDate) return;
     setFormError("");
 
-    // Validación frontend: si eligen hoy, la hora ya debe ser futura
     const chosen = new Date(`${formDate}T${formTime}:00`);
     if (chosen <= new Date()) {
       setFormError("La fecha y hora deben ser posteriores al momento actual.");
@@ -816,20 +852,67 @@ export default function PatientDetailPage() {
       <div style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.25rem", marginBottom: "1.25rem" }}>
         <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--mc-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "1rem" }}>Datos personales</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
-          {[
-            { label: "Teléfono", value: patient.phone || "No registrado", icon: "📞" },
-            { label: "Fecha de nacimiento", value: patient.birthdate ? formatDateLong(patient.birthdate) : "No registrada", icon: "🎂" },
-            { label: "Correo", value: patient.email, icon: "✉️" },
-          ].map((item) => (
-            <div key={item.label} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>{item.icon}</span>
-              <div>
-                <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>{item.label}</p>
-                <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{item.value}</p>
+          {/* Teléfono paciente */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+            <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>📞</span>
+            <div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>Teléfono</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{patient.phone || "No registrado"}</p>
+              {patient.phone && (
+                <div style={{ marginTop: "0.375rem" }}>
+                  <CallButton phone={patient.phone} label="Llamar paciente" />
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Fecha de nacimiento */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+            <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>🎂</span>
+            <div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>Fecha de nacimiento</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{patient.birthdate ? formatDateLong(patient.birthdate) : "No registrada"}</p>
+            </div>
+          </div>
+          {/* Correo */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+            <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>✉️</span>
+            <div>
+              <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>Correo</p>
+              <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{patient.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Contacto de emergencia */}
+        {patient.emergencyContact ? (
+          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--mc-border)" }}>
+            <p style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.75rem" }}>🚨 Contacto de emergencia</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+                <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>👤</span>
+                <div>
+                  <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>Nombre</p>
+                  <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{patient.emergencyContact.name}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>{patient.emergencyContact.relationship}</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem" }}>
+                <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.1rem" }}>📞</span>
+                <div>
+                  <p style={{ fontSize: "0.6875rem", color: "var(--mc-text-muted)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.03em" }}>Teléfono</p>
+                  <p style={{ fontSize: "0.875rem", color: "var(--mc-text)", marginTop: "0.125rem" }}>{patient.emergencyContact.phone}</p>
+                  <div style={{ marginTop: "0.375rem" }}>
+                    <CallButton phone={patient.emergencyContact.phone} label="Llamar contacto" />
+                  </div>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--mc-border)" }}>
+            <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", fontStyle: "italic" }}>🚨 Sin contacto de emergencia registrado.</p>
+          </div>
+        )}
       </div>
 
       {/* Selector de mes */}
