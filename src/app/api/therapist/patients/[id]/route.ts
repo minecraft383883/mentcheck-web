@@ -40,7 +40,10 @@ export async function GET(
 
     const patient = await prisma.patientProfile.findUnique({
       where: { id },
-      include: { user: { select: { name: true, email: true } } },
+      include: {
+        user: { select: { name: true, email: true } },
+        emergencyContact: true,
+      },
     });
     if (!patient) {
       return NextResponse.json({ error: "Perfil de paciente no encontrado." }, { status: 404 });
@@ -84,6 +87,13 @@ export async function GET(
       email: patient.user.email,
       phone: patient.phone ?? "",
       birthdate: patient.birthdate ? patient.birthdate.toISOString().split("T")[0] : "",
+      emergencyContact: patient.emergencyContact
+        ? {
+            name: patient.emergencyContact.name,
+            phone: patient.emergencyContact.phone,
+            relationship: patient.emergencyContact.relationship,
+          }
+        : null,
       month: MONTH_NAMES[month],
       monthIndex: month,
       year,
