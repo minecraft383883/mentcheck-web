@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+// Recordatorios y Progreso son exclusivos del psicólogo — el paciente solo ve Inicio, Diario y Perfil
 const navItems = [
   {
     href: "/dashboard",
@@ -26,27 +27,6 @@ const navItems = [
         <polyline points="14 2 14 8 20 8" />
         <line x1="16" y1="13" x2="8" y2="13" />
         <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/reminders",
-    label: "Recordatorios",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    ),
-  },
-  {
-    href: "/dashboard/progress",
-    label: "Progreso",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
       </svg>
     ),
   },

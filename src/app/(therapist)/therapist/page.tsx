@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MOOD_OPTIONS } from "@/types/diary";
 
 interface Patient {
@@ -16,14 +17,34 @@ interface Patient {
 export default function TherapistDashboard() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const router = useRouter();
 
-  useEffect(() => {
+  function load() {
+    setLoading(true);
     fetch("/api/therapist/patients")
       .then((res) => res.json())
       .then((data) => { if (data.patients) setPatients(data.patients); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleRemove(patient: Patient) {
+    if (!confirm(`¿Dar de baja a ${patient.name}? Se eliminará la vinculación terapéutica. Esta acción no se puede deshacer.`)) return;
+    setRemovingId(patient.id);
+    try {
+      await fetch("/api/therapist/patients", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientProfileId: patient.id }),
+      });
+      load();
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   return (
     <div style={{ padding: "2rem 1.5rem", maxWidth: "780px" }}>
@@ -67,32 +88,33 @@ export default function TherapistDashboard() {
             const moodOption = patient.lastMood
               ? MOOD_OPTIONS.find((m) => m.value === patient.lastMood)
               : null;
+            const isRemoving = removingId === patient.id;
 
             return (
-              <Link
+              <div
                 key={patient.id}
-                href={`/therapist/patients/${patient.id}`}
-                style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.125rem 1.25rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "1rem", transition: "border-color 0.15s, box-shadow 0.15s" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-teal)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-border)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none"; }}
+                style={{ backgroundColor: "#fff", border: "1px solid var(--mc-border)", borderRadius: "0.875rem", padding: "1.125rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", opacity: isRemoving ? 0.5 : 1, transition: "opacity 0.2s" }}
               >
                 {/* Avatar */}
                 <div style={{ width: "42px", height: "42px", borderRadius: "50%", backgroundColor: "var(--mc-sky)", border: "1.5px solid var(--mc-teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: "var(--mc-primary)", flexShrink: 0 }}>
                   {patient.name.charAt(0).toUpperCase()}
                 </div>
 
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Info — clickable */}
+                <Link
+                  href={`/therapist/patients/${patient.id}`}
+                  style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+                >
                   <p style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--mc-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {patient.name}
                   </p>
                   <p style={{ fontSize: "0.8125rem", color: "var(--mc-text-muted)", marginTop: "0.125rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {patient.email}
                   </p>
-                </div>
+                </Link>
 
                 {/* Estado hoy */}
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ flexShrink: 0 }}>
                   {patient.hasEntryToday ? (
                     <span style={{ fontSize: "1.125rem" }}>{moodOption?.emoji ?? "?"}</span>
                   ) : (
@@ -101,7 +123,17 @@ export default function TherapistDashboard() {
                     </span>
                   )}
                 </div>
-              </Link>
+
+                {/* Botón dar de baja */}
+                <button
+                  onClick={() => handleRemove(patient)}
+                  disabled={isRemoving}
+                  title="Dar de baja al paciente"
+                  style={{ padding: "0.375rem 0.75rem", borderRadius: "0.5rem", border: "1px solid #dc2626", backgroundColor: "#fee2e2", color: "#dc2626", fontSize: "0.75rem", fontWeight: 500, cursor: isRemoving ? "not-allowed" : "pointer", flexShrink: 0, whiteSpace: "nowrap" }}
+                >
+                  {isRemoving ? "..." : "Dar de baja"}
+                </button>
+              </div>
             );
           })}
         </div>
