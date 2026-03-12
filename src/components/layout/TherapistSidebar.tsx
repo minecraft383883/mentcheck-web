@@ -48,11 +48,16 @@ export default function TherapistSidebar() {
         className="sidebar-desktop"
         style={{ width: "220px", minHeight: "100vh", backgroundColor: "#fff", borderRight: "1px solid var(--mc-border)", flexDirection: "column", position: "fixed", top: 0, left: 0, zIndex: 40 }}
       >
-        {/* Logo */}
-        <div style={{ padding: "1.5rem 1.25rem 1.25rem", borderBottom: "1px solid var(--mc-border)" }}>
-          <p style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--mc-primary)", letterSpacing: "-0.01em" }}>Mentcheck</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)", marginTop: "0.125rem" }}>Panel del psicólogo</p>
-        </div>
+              {/* Logo */}
+      <div style={{ padding: "1.25rem 1.99rem 1rem", borderBottom: "1px solid var(--mc-border)", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.25rem" }}>
+        <img
+          src="/logo.png"
+          alt="Mentcheck"
+          style={{ height: "100px", width: "auto", objectFit: "contain" }}
+        />
+        <p style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)" }}></p>
+      </div>
+
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>

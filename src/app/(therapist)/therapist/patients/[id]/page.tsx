@@ -133,21 +133,65 @@ async function downloadPDF(patient: PatientDetail) {
   const MUTED = [100, 100, 100] as [number, number, number];
   const DARK = [30, 30, 30] as [number, number, number];
   const WHITE = [255, 255, 255] as [number, number, number];
+
   const recordsWithMood = patient.records.filter((r) => r.mood !== null);
   const daysWithEntry = recordsWithMood.length;
   const percentage = Math.round((daysWithEntry / patient.records.length) * 100);
   const moodCounts: Record<string, number> = {};
   recordsWithMood.forEach((r) => { if (r.mood) moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1; });
   const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  doc.setFillColor(...PRIMARY); doc.rect(0, 0, 210, 32, "F");
-  doc.setTextColor(...WHITE); doc.setFontSize(20); doc.setFont("helvetica", "bold"); doc.text("Mentcheck", 14, 14);
-  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("Agenda terapéutica", 14, 20);
-  doc.setFontSize(11); doc.text("Reporte del Paciente", 14, 28);
-  const todayLabel = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-  doc.setFontSize(8); doc.text(`Generado: ${todayLabel}`, 196, 28, { align: "right" });
-  let y = 44;
-  doc.setTextColor(...PRIMARY); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text("Datos del paciente", 14, y);
-  y += 2; doc.setDrawColor(...SKY); doc.setLineWidth(0.4); doc.line(14, y + 2, 196, y + 2); y += 8;
+
+  // ── Encabezado con logo ──────────────────────────────────────────
+  doc.setFillColor(...PRIMARY);
+  doc.rect(0, 0, 210, 36, "F");
+
+  // Cargar logo desde /logo.png
+  const logoUrl = "/logo.png";
+  const imgData = await fetch(logoUrl)
+    .then((r) => r.blob())
+    .then(
+      (blob) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        })
+    );
+
+  // Logo a la izquierda (ajusta ancho/alto según tu logo)
+  doc.addImage(imgData, "PNG", 10, 4, 28, 28);
+
+  doc.setTextColor(...WHITE);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("Mentcheck", 42, 16);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Agenda terapéutica", 42, 22);
+  doc.setFontSize(11);
+  doc.text("Reporte del Paciente", 42, 30);
+
+  const todayLabel = new Date().toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  doc.setFontSize(8);
+  doc.text(`Generado: ${todayLabel}`, 196, 30, { align: "right" });
+
+  let y = 48; // Ajustar inicio del contenido (antes era 44)
+
+  // ── Datos del paciente ──────────────────────────────────────────
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Datos del paciente", 14, y);
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.setLineWidth(0.4);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
   const personalData: [string, string][] = [
     ["Nombre", patient.name || "No registrado"],
     ["Correo", patient.email || "No registrado"],
@@ -155,45 +199,109 @@ async function downloadPDF(patient: PatientDetail) {
     ["Fecha de nacimiento", formatDateLong(patient.birthdate)],
   ];
   personalData.forEach(([label, value]) => {
-    doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...MUTED); doc.text(label + ":", 14, y);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(...DARK); doc.text(value, 58, y); y += 6.5;
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MUTED);
+    doc.text(label + ":", 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.text(value, 58, y);
+    y += 6.5;
   });
+
   y += 4;
-  doc.setTextColor(...PRIMARY); doc.setFontSize(11); doc.setFont("helvetica", "bold");
+
+  // ── Resumen del mes ──────────────────────────────────────────────
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
   doc.text(`Resumen — ${patient.month} ${patient.year}`, 14, y);
-  y += 2; doc.setDrawColor(...SKY); doc.line(14, y + 2, 196, y + 2); y += 8;
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
   const summaryData: [string, string][] = [
     ["Días registrados", `${daysWithEntry} de ${patient.records.length} días (${percentage}%)`],
     ["Emoción predominante", dominantMood ? (MOOD_LABELS[dominantMood] ?? dominantMood) : "Sin datos"],
   ];
   summaryData.forEach(([label, value]) => {
-    doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); doc.setTextColor(...MUTED); doc.text(label + ":", 14, y);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(...DARK); doc.text(value, 68, y); y += 6.5;
-  });
-  y += 4;
-  doc.setTextColor(...PRIMARY); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text("Registro del mes", 14, y);
-  y += 2; doc.setDrawColor(...SKY); doc.line(14, y + 2, 196, y + 2); y += 8;
-  doc.setFillColor(...SKY); doc.rect(14, y - 5, 182, 7, "F");
-  doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(...PRIMARY);
-  doc.text("Fecha", 16, y); doc.text("Estado de ánimo", 70, y); doc.text("Nota", 130, y); y += 5;
-  recordsWithMood.slice().reverse().forEach((record, idx) => {
-    if (y > 272) { doc.addPage(); y = 20; }
-    if (idx % 2 === 0) { doc.setFillColor(248, 252, 255); doc.rect(14, y - 4, 182, 6.5, "F"); }
-    doc.setFont("helvetica", "normal"); doc.setTextColor(...DARK); doc.setFontSize(8);
-    const dateLabel = new Date(record.date + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-    doc.text(dateLabel, 16, y); doc.text(MOOD_LABELS[record.mood!] ?? record.mood!, 70, y);
-    if (record.note) { const note = record.note.length > 38 ? record.note.substring(0, 35) + "..." : record.note; doc.text(note, 130, y); }
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...MUTED);
+    doc.text(label + ":", 14, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.text(value, 68, y);
     y += 6.5;
   });
-  if (recordsWithMood.length === 0) { doc.setFontSize(8.5); doc.setTextColor(...MUTED); doc.text("No hay registros este mes.", 14, y); }
+
+  y += 4;
+
+  // ── Registro del mes ──────────────────────────────────────────────
+  doc.setTextColor(...PRIMARY);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Registro del mes", 14, y);
+  y += 2;
+  doc.setDrawColor(...SKY);
+  doc.line(14, y + 2, 196, y + 2);
+  y += 8;
+
+  doc.setFillColor(...SKY);
+  doc.rect(14, y - 5, 182, 7, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PRIMARY);
+  doc.text("Fecha", 16, y);
+  doc.text("Estado de ánimo", 70, y);
+  doc.text("Nota", 130, y);
+  y += 5;
+
+  recordsWithMood.slice().reverse().forEach((record, idx) => {
+    if (y > 272) {
+      doc.addPage();
+      y = 20;
+    }
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 252, 255);
+      doc.rect(14, y - 4, 182, 6.5, "F");
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.setFontSize(8);
+    const dateLabel = new Date(record.date + "T12:00:00").toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "short",
+    });
+    doc.text(dateLabel, 16, y);
+    doc.text(MOOD_LABELS[record.mood!] ?? record.mood!, 70, y);
+    if (record.note) {
+      const note = record.note.length > 38 ? record.note.substring(0, 35) + "..." : record.note;
+      doc.text(note, 130, y);
+    }
+    y += 6.5;
+  });
+
+  if (recordsWithMood.length === 0) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...MUTED);
+    doc.text("No hay registros este mes.", 14, y);
+  }
+
+  // ── Footer en todas las páginas ──────────────────────────────────
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+    doc.setPage(i);
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
     doc.text("Mentcheck — Agenda terapéutica", 14, 291);
     doc.text(`Página ${i} de ${pageCount}`, 196, 291, { align: "right" });
   }
+
   doc.save(`mentcheck-${patient.name.replace(/\s+/g, "-").toLowerCase()}-${patient.month.toLowerCase()}-${patient.year}.pdf`);
 }
+
 
 // ─── Calendario ───────────────────────────────────────────────────────────────
 interface CalendarProps {
