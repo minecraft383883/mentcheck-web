@@ -48,14 +48,13 @@ function LoginForm() {
       className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
       style={{ backgroundColor: "var(--mc-surface)" }}
     >
-      <div className="mb-8 text-center">
-        <p
-          className="text-2xl font-semibold tracking-tight"
-          style={{ color: "var(--mc-primary)" }}
-        >
-          Mentcheck
-        </p>
-        <p className="text-sm mt-1" style={{ color: "var(--mc-text-muted)" }}>
+      <div className="mb-8 text-center flex flex-col items-center">
+        <img
+          src="/logo.png"
+          alt="Mentcheck"
+          style={{ height: "56px", width: "auto", objectFit: "contain", marginBottom: "0.5rem" }}
+        />
+        <p className="text-sm" style={{ color: "var(--mc-text-muted)" }}>
           Agenda terapéutica
         </p>
       </div>
