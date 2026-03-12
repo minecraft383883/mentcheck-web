@@ -143,7 +143,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Accesos rápidos — solo Diario y Perfil */}
+      {/* Accesos rápidos */}
       <div
         style={{
           display: "grid",
@@ -154,6 +154,7 @@ export default function DashboardPage() {
       >
         {[
           { href: "/dashboard/diary", label: "Diario", desc: "Escribe tu día" },
+          { href: "/dashboard/reminders", label: "Mi info", desc: "Citas, notas y recordatorios" },
           { href: "/dashboard/profile", label: "Perfil", desc: "Edita tus datos" },
         ].map((item) => (
           <Link
