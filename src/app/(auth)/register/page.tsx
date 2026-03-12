@@ -68,7 +68,7 @@ export default function RegisterPage() {
         <img
           src="/logo.png"
           alt="Mentcheck"
-          style={{ height: "56px", width: "auto", objectFit: "contain", marginBottom: "0.5rem" }}
+          style={{ height: "115px", width: "auto", objectFit: "contain", marginBottom: "0.5rem" }}
         />
         <p className="text-sm" style={{ color: "var(--mc-text-muted)" }}>
           Agenda terapéutica
