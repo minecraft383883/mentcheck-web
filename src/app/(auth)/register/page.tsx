@@ -64,14 +64,13 @@ export default function RegisterPage() {
       className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
       style={{ backgroundColor: "var(--mc-surface)" }}
     >
-      <div className="mb-8 text-center">
-        <p
-          className="text-2xl font-semibold tracking-tight"
-          style={{ color: "var(--mc-primary)" }}
-        >
-          Mentcheck
-        </p>
-        <p className="text-sm mt-1" style={{ color: "var(--mc-text-muted)" }}>
+      <div className="mb-8 text-center flex flex-col items-center">
+        <img
+          src="/logo.png"
+          alt="Mentcheck"
+          style={{ height: "56px", width: "auto", objectFit: "contain", marginBottom: "0.5rem" }}
+        />
+        <p className="text-sm" style={{ color: "var(--mc-text-muted)" }}>
           Agenda terapéutica
         </p>
       </div>
@@ -122,7 +121,7 @@ export default function RegisterPage() {
                 boxShadow: role === r ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
               }}
             >
-              {r === "PATIENT" ? "Paciente" : "Psicólogo"}
+              {r === "PATIENT" ? "Paciente" : "Psícólogo"}
             </button>
           ))}
         </div>
