@@ -3,13 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MOOD_OPTIONS } from "@/types/diary";
-import { REMINDER_TYPES } from "@/types/reminder";
 
 interface DashboardData {
   name: string;
   hasEntryToday: boolean;
   lastMood: string | null;
-  pendingReminders: { id: string; title: string; type: string; time: string }[];
   emergencyPhone: string | null;
 }
 
@@ -145,99 +143,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Recordatorios pendientes */}
-      <div
-        style={{
-          backgroundColor: "#fff",
-          border: "1px solid var(--mc-border)",
-          borderRadius: "0.875rem",
-          overflow: "hidden",
-          marginBottom: "1rem",
-        }}
-      >
-        <div
-          style={{
-            padding: "1rem 1.25rem",
-            borderBottom: "1px solid var(--mc-border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <h2 style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--mc-text)" }}>
-            Recordatorios pendientes
-          </h2>
-          <Link
-            href="/dashboard/reminders"
-            style={{
-              fontSize: "0.8125rem",
-              color: "var(--mc-primary)",
-              textDecoration: "none",
-              fontWeight: 500,
-            }}
-          >
-            Ver todos
-          </Link>
-        </div>
-
-        {data.pendingReminders.length === 0 ? (
-          <p
-            style={{
-              padding: "1.5rem 1.25rem",
-              fontSize: "0.875rem",
-              color: "var(--mc-text-muted)",
-            }}
-          >
-            No tienes recordatorios pendientes.
-          </p>
-        ) : (
-          <div>
-            {data.pendingReminders.map((reminder, index) => {
-              const typeOption = REMINDER_TYPES.find((t) => t.value === reminder.type);
-              return (
-                <div
-                  key={reminder.id}
-                  style={{
-                    padding: "0.875rem 1.25rem",
-                    borderBottom:
-                      index < data.pendingReminders.length - 1
-                        ? "1px solid var(--mc-border)"
-                        : "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.875rem",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor: typeOption?.color ?? "var(--mc-border)",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <p
-                    style={{
-                      flex: 1,
-                      fontSize: "0.875rem",
-                      color: "var(--mc-text)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {reminder.title}
-                  </p>
-                  <span style={{ fontSize: "0.75rem", color: "var(--mc-text-muted)" }}>
-                    {reminder.time}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Accesos rápidos */}
+      {/* Accesos rápidos — solo Diario y Perfil */}
       <div
         style={{
           display: "grid",
@@ -248,8 +154,6 @@ export default function DashboardPage() {
       >
         {[
           { href: "/dashboard/diary", label: "Diario", desc: "Escribe tu día" },
-          { href: "/dashboard/reminders", label: "Recordatorios", desc: "Gestiona tus alarmas" },
-          { href: "/dashboard/progress", label: "Progreso", desc: "Ve tus estadísticas" },
           { href: "/dashboard/profile", label: "Perfil", desc: "Edita tus datos" },
         ].map((item) => (
           <Link
@@ -266,8 +170,7 @@ export default function DashboardPage() {
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-teal)";
-              (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                "0 2px 8px rgba(0,0,0,0.06)";
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = "var(--mc-border)";
