@@ -4,10 +4,16 @@ import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
+const SISTEMA_BLOQUEADO = process.env.SISTEMA_BLOQUEADO === "true";
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const role = (req.auth?.user as { role?: string })?.role;
   const path = req.nextUrl.pathname;
+
+  if (SISTEMA_BLOQUEADO && path !== "/bloqueado") {
+    return NextResponse.redirect(new URL("/bloqueado", req.nextUrl));
+  }
 
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/register");
   const isDashboardRoute = path.startsWith("/dashboard");
